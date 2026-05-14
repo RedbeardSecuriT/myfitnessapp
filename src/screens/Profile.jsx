@@ -40,7 +40,7 @@ export default function Profile({ setScreen }) {
   const checkinCount  = Object.keys(data.checkins || {}).length
   const currentWeight = Object.keys(data.checkins || {}).sort().reverse()
     .reduce((acc, k) => acc || data.checkins[k]?.weight, 0) || data.lastWeight || '—'
-  const startWeight   = profile?.currentWeight || 350
+  const startWeight   = parseFloat(profile?.currentWeight) || 0
   const lostSoFar     = currentWeight !== '—' ? (startWeight - currentWeight).toFixed(1) : '—'
 
   return (
@@ -62,7 +62,7 @@ export default function Profile({ setScreen }) {
       {/* Stats row */}
       <div className="card flex-between" style={{ marginBottom:16 }}>
         {stat('Current weight', currentWeight !== '—' ? currentWeight + ' lbs' : '—')}
-        {stat('Goal weight', (profile?.goalWeight || '285') + ' lbs')}
+        {stat('Goal weight', (profile?.goalWeight || '—') + (profile?.goalWeight ? ' lbs' : ''))}
         {stat('Lbs lost', lostSoFar)}
         {stat('Check-ins', checkinCount)}
       </div>

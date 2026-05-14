@@ -85,15 +85,20 @@ export function useStreak() {
 export function useWeightProgress() {
   const { data } = useApp()
   return useMemo(() => {
+    const profile     = data.userProfile
+    const startWeight = parseFloat(profile?.currentWeight) || 0
+    const goalWeight  = parseFloat(profile?.goalWeight)    || 0
     const dates       = Object.keys(data.checkins || {}).sort()
     const latestDate  = dates[dates.length - 1]
-    const currentWeight = latestDate ? parseFloat(data.checkins[latestDate]?.weight) || data.lastWeight || 335.4 : data.lastWeight || 335.4
-    const startWeight = 350
-    const goalWeight  = 285
-    const lost        = +(startWeight - currentWeight).toFixed(1)
-    const pct         = Math.round((lost / (startWeight - goalWeight)) * 100)
+    const currentWeight = latestDate
+      ? parseFloat(data.checkins[latestDate]?.weight) || data.lastWeight || startWeight
+      : data.lastWeight || startWeight
+    const lost        = startWeight > 0 ? +(startWeight - currentWeight).toFixed(1) : 0
+    const pct         = (startWeight > 0 && goalWeight > 0 && startWeight !== goalWeight)
+      ? Math.min(100, Math.round((lost / (startWeight - goalWeight)) * 100))
+      : 0
     return { currentWeight, startWeight, goalWeight, lost, pct }
-  }, [data.checkins, data.lastWeight])
+  }, [data.checkins, data.lastWeight, data.userProfile])
 }
 
 // Returns today's workout index and program info

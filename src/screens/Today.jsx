@@ -16,7 +16,7 @@ export default function Today({ setScreen }) {
     return () => clearInterval(t)
   }, [])
 
-  const info    = getProgramInfo(now)
+  const info    = getProgramInfo(now, data.userProfile)
   const ifWin   = getIFWindow(data.userProfile)
   const name    = data.userProfile?.name || user?.email?.split('@')[0] || ''
   const hour    = now.getHours()

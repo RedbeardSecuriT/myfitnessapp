@@ -36,6 +36,11 @@ export default function CheckIn() {
     return entries
   }, [data.checkins])
 
+  const profile     = data.userProfile
+  const startWeight = parseFloat(profile?.currentWeight) || 350
+  const goalWeight  = parseFloat(profile?.goalWeight)    || 285
+  const goalDateStr = profile?.goalDate || '2026-12-15'
+
   const renderChart = () => {
     if (chartData.length < 2) return (
       <div style={{ textAlign:'center', padding:'24px 0', color:'var(--muted)', fontSize:13 }}>Log 2+ weight entries to see your progress chart</div>
@@ -43,9 +48,9 @@ export default function CheckIn() {
 
     const W = 320, H = 160, PAD = 28
     const weights    = chartData.map(e => e.weight)
-    const minW       = Math.min(...weights, 285) - 5
-    const maxW       = Math.max(...weights, 350) + 5
-    const goalDate   = new Date('2026-12-15')
+    const minW       = Math.min(...weights, goalWeight) - 5
+    const maxW       = Math.max(...weights, startWeight) + 5
+    const goalDate   = new Date(goalDateStr)
     const minDate    = new Date(chartData[0].date).getTime()
     const maxDate    = goalDate.getTime()
 
@@ -55,7 +60,13 @@ export default function CheckIn() {
     let content = ''
 
     // Grid lines
-    ;[350, 325, 300, 285].forEach(w => {
+    // Dynamic grid lines
+    const range = maxW - minW
+    const step = range > 80 ? 25 : range > 40 ? 10 : 5
+    const gridStart = Math.ceil(minW / step) * step
+    const gridValues = []
+    for (let w = gridStart; w <= maxW; w += step) gridValues.push(w)
+    ;gridValues.forEach(w => {
       if (w < minW || w > maxW) return
       const y = toY(w)
       content += `<line x1="${PAD}" y1="${y}" x2="${W-PAD}" y2="${y}" stroke="rgba(255,255,255,.06)" stroke-width="1"/><text x="${PAD-3}" y="${y+4}" text-anchor="end" fill="rgba(255,255,255,.25)" font-size="9" font-family="DM Sans">${w}</text>`
@@ -63,7 +74,7 @@ export default function CheckIn() {
 
     // Goal projection dashed line
     const fx = toX(chartData[0].date), fy = toY(chartData[0].weight)
-    const gx = toX(goalDate), gy = toY(285)
+    const gx = toX(goalDate), gy = toY(goalWeight)
     content += `<line x1="${fx}" y1="${fy}" x2="${gx}" y2="${gy}" stroke="rgba(251,191,36,.3)" stroke-width="1.5" stroke-dasharray="4,3"/>`
 
     // Actual path
@@ -78,7 +89,7 @@ export default function CheckIn() {
     })
 
     // Goal dot
-    content += `<circle cx="${gx}" cy="${gy}" r="5" fill="none" stroke="rgba(251,191,36,.6)" stroke-width="2"/><text x="${gx}" y="${gy-10}" text-anchor="middle" fill="rgba(251,191,36,.8)" font-size="9" font-family="DM Sans">285 🇯🇵</text>`
+    content += `<circle cx="${gx}" cy="${gy}" r="5" fill="none" stroke="rgba(251,191,36,.6)" stroke-width="2"/><text x="${gx}" y="${gy-10}" text-anchor="middle" fill="rgba(251,191,36,.8)" font-size="9" font-family="DM Sans">${goalWeight} 🎯</text>`
 
     return (
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:H, overflow:'visible' }}
@@ -111,7 +122,7 @@ export default function CheckIn() {
       <div className="card">
         <div style={{ fontSize:12, color:'var(--muted)', marginBottom:8 }}>Log your weight first thing in the morning, before eating.</div>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <input type="number" inputMode="decimal" placeholder="335.4" value={weight}
+          <input type="number" inputMode="decimal" placeholder={startWeight > 0 ? startWeight.toFixed(1) : "e.g. 220"} value={weight}
             onChange={e => setWeight(e.target.value)}
             style={{ flex:1, background:'var(--bg)', border:'2px solid var(--accent)', borderRadius:12, padding:'12px 16px', color:'var(--text)', fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, outline:'none', textAlign:'center' }}
           />
