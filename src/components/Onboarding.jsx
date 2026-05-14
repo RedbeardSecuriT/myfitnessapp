@@ -23,6 +23,7 @@ const STEPS = [
   { id:'workoutTime',  type:'chips-single',q:'Preferred workout time?',        hint:'Affects pre-workout meal and eating window timing.',          options:['Early morning (5–7am)','Morning (7–9am)','Midday (11am–1pm)','Early afternoon (2–4pm)','Late afternoon (4–6pm)','Evening (6–8pm)','Night (8–10pm)'], validate: v => !!v },
   { id:'sleepQuality', type:'chips-single',q:'How is your sleep?',             hint:'Sleep is when your body recovers and burns fat.',             options:['Great — 7–9h, wake rested','OK — 6–7h, sometimes tired','Poor — under 6h or restless','Night shifts / irregular'], validate: v => !!v },
   { id:'primaryGoal',  type:'chips-single',q:'Beyond weight — what matters most?', hint:'Shapes whether we prioritize strength, endurance, or energy.', options:['Feel more energetic daily','Get stronger','Improve cardiovascular health','Look better / body composition','Manage a health condition'], validate: v => !!v },
+  { id:'planNotes', type:'textarea', q:'Anything specific for your plan?', hint:"Overnight oats every morning? Specific cardio targets? Foods you want kept in? Anything you want the AI to know — be specific.", placeholder:"e.g. Keep overnight oats for breakfast. Target 2 miles on treadmill. I have a bad left knee so avoid lunges. I train BJJ 3x/week already.", validate: v => true },
   { id:'eatingSchedule', type:'chips-single', q:'Eating schedule?',            hint:'Intermittent fasting works well for fat loss.',               options:['Intermittent fasting','3 meals a day','2 meals + snacks','No structure'], validate: v => !!v },
   { id:'ifWindow',     type:'chips-single',q:'Which fasting window?',           hint:'Eating window is when all meals happen.',                    options:['16:8 — Fast 16h, eat 8h','18:6 — Fast 18h, eat 6h','20:4 — Fast 20h, eat 4h','14:10 — Beginner friendly'], validate: v => !!v, conditional: d => d.eatingSchedule === 'Intermittent fasting' },
   { id:'ifStart',      type:'chips-single',q:'When does your eating window open?', hint:'Sets your break-fast time and all meal reminders.',       options:['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM'], validate: v => !!v, conditional: d => d.eatingSchedule === 'Intermittent fasting' },
@@ -100,6 +101,7 @@ export default function Onboarding({ onComplete }) {
       trainingDays: obData.trainingDays, workoutTime: obData.workoutTime,
       additionalSports: (obData.additionalSports || []).filter(s => s !== 'None').join(', ') || 'None',
       sleepQuality: obData.sleepQuality, primaryGoal: obData.primaryGoal,
+      planNotes: obData.planNotes || '',
       eatingSchedule: obData.eatingSchedule, ifWindow: obData.ifWindow || null, ifStart: obData.ifStart || null,
     }
 
@@ -157,6 +159,17 @@ export default function Onboarding({ onComplete }) {
       <div style={{ flex:1, padding:'0 24px', overflowY:'auto' }}>
         <div className="ob-question">{cur?.q}</div>
         <div className="ob-hint">{cur?.hint}</div>
+
+        {cur?.type === 'textarea' && (
+          <textarea
+            className="ob-input"
+            rows={5}
+            placeholder={cur.placeholder}
+            value={obData[cur.id] || ''}
+            onChange={e => set(cur.id, e.target.value)}
+            style={{ resize:'none', lineHeight:1.6, fontSize:14 }}
+          />
+        )}
 
         {(cur?.type === 'text' || cur?.type === 'number') && (
           <input className="ob-input" type={cur.type}

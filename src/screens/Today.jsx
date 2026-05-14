@@ -116,8 +116,8 @@ export default function Today({ setScreen }) {
       {info.isSunday ? (
         <div className="card" style={{ background:'linear-gradient(135deg,#0d2a1a,#0d1a2a)', borderColor:'rgba(0,200,150,.2)' }}>
           <div className="flex-between" style={{ marginBottom:12 }}>
-            <div className="syne fw7" style={{ color:'var(--accent)' }}>WEEK {info.weekNum} · DAY 7</div>
-            <div style={{ fontSize:12, color:'var(--muted)' }}>Last day of week</div>
+            <div className="syne fw7" style={{ color:'var(--accent)' }}>WEEK {info.weekNum} · {info.dayName.toUpperCase()}</div>
+            <div style={{ fontSize:12, color:'var(--muted)' }}>Rest day · {info.weekRange}</div>
           </div>
           <div style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>{info.weekRange}</div>
           <div style={{ display:'flex', gap:6, marginBottom:16 }}>
@@ -137,7 +137,7 @@ export default function Today({ setScreen }) {
       ) : (
         <div className="card" style={{ background:'linear-gradient(135deg,#0d2a1a,#0d1a2a)', borderColor:'rgba(0,200,150,.2)' }}>
           <div className="flex-between" style={{ marginBottom:8 }}>
-            <div className="syne fw7" style={{ color:'var(--accent)' }}>WEEK {info.weekNum} · DAY {info.dayOfWeek||7}</div>
+            <div className="syne fw7" style={{ color:'var(--accent)' }}>WEEK {info.weekNum} · {info.dayName.toUpperCase()}</div>
             <div style={{ fontSize:12, color:'var(--muted)' }}>{info.weekRange}</div>
           </div>
           <div style={{ display:'flex', gap:6 }}>

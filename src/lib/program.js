@@ -1,18 +1,19 @@
 // ── Week/day calculations ─────────────────────────────────────────────────────
 // Week always starts Monday, ends Sunday.
-// Week number is based on ISO calendar weeks from the Monday of the user's
-// onboard week — NOT from first login day. Opening the app on a Wednesday
-// does NOT make it "Day 3 of Week 1". It's just Wednesday of that week.
+// GLOBAL week number: all users share the same week count from the app's
+// launch date (May 4 2026). A user joining in week 10 is IN week 10,
+// not week 1. This keeps the community in sync.
+
+const GLOBAL_LAUNCH = new Date('2026-05-04') // Must be a Monday
 
 export function getProgramInfo(date = new Date(), userProfile = null) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
 
-  // JS getDay(): 0=Sun, 1=Mon ... 6=Sat
-  // Convert to Mon=0 ... Sun=6
+  // JS getDay(): 0=Sun,1=Mon...6=Sat → convert to Mon=0...Sun=6
   const jsDow    = d.getDay()
-  const dow      = jsDow === 0 ? 6 : jsDow - 1  // Mon=0, Tue=1 ... Sun=6
-  const isRestDay = dow === 6                     // Sunday
+  const dow      = jsDow === 0 ? 6 : jsDow - 1
+  const isRestDay = dow === 6
   const isSunday  = dow === 6
 
   // Monday of the current week
@@ -21,46 +22,31 @@ export function getProgramInfo(date = new Date(), userProfile = null) {
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
 
-  // Week number: count from Monday of onboard week (or program start)
-  // Use Monday of the week the user onboarded, not the exact onboard date
-  let originMonday
-  if (userProfile?.programStart) {
-    const ps = new Date(userProfile.programStart)
-    ps.setHours(0, 0, 0, 0)
-    const psDow = ps.getDay() === 0 ? 6 : ps.getDay() - 1
-    originMonday = new Date(ps)
-    originMonday.setDate(ps.getDate() - psDow)
-  } else {
-    // Default origin: May 4 2026 (a Monday)
-    originMonday = new Date('2026-05-04')
-  }
+  // Global week number — same for ALL users regardless of when they joined
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const weekNum   = Math.max(1, Math.floor((weekStart - originMonday) / msPerWeek) + 1)
+  const weekNum   = Math.max(1, Math.floor((weekStart - GLOBAL_LAUNCH) / msPerWeek) + 1)
 
   const fmt = dt => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
   // Goal info from profile
   const goalDateStr = userProfile?.goalDate || '2026-12-15'
   const goalDate    = new Date(goalDateStr)
-  const goalWeight  = parseFloat(userProfile?.goalWeight) || 285
-  const startWeight = parseFloat(userProfile?.currentWeight) || 0
+  const goalWeight  = parseFloat(userProfile?.goalWeight)   || null
+  const startWeight = parseFloat(userProfile?.currentWeight) || null
 
-  // Gym days from profile — array of dow indices (Mon=0...Sun=6)
-  // gymDays stored as e.g. ['Mon','Wed','Fri'] or ['0','2','4']
-  const gymDayNames   = userProfile?.gymDays || []
-  const gymDayMap     = { Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6 }
-  const gymDowSet     = new Set(gymDayNames.map(d => typeof d === 'number' ? d : (gymDayMap[d] ?? parseInt(d))))
-  const isGymDay      = !isRestDay && (gymDowSet.size === 0 || gymDowSet.has(dow))
-  const isHomeDay     = !isRestDay && gymDowSet.size > 0 && !gymDowSet.has(dow)
-  const workoutIdx    = isRestDay ? null : dow  // Mon=0...Sat=5
+  // Gym day mapping
+  const gymDayNames = userProfile?.gymDays || []
+  const gymDayMap   = { Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6 }
+  const gymDowSet   = new Set(gymDayNames.map(d => typeof d === 'number' ? d : (gymDayMap[d] ?? parseInt(d))))
+  const isGymDay    = !isRestDay && (gymDowSet.size === 0 || gymDowSet.has(dow))
+  const isHomeDay   = !isRestDay && gymDowSet.size > 0 && !gymDowSet.has(dow)
 
   const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
   return {
     weekNum, dow, jsDow, isRestDay, isSunday,
     isGymDay, isHomeDay,
-    isGymDay: !isRestDay && (gymDowSet.size === 0 || gymDowSet.has(dow)),
-    workoutIdx,
+    workoutIdx: isRestDay ? null : dow,
     dayName: dayNames[dow],
     weekRange: `${fmt(weekStart)} – ${fmt(weekEnd)}`,
     weekStart, weekEnd,
@@ -93,14 +79,11 @@ export function getIFWindow(userProfile) {
 
   const openMin  = openHour * 60
   const closeMin = openMin + durationH * 60
-
   const fmt = (mins) => {
-    const h  = Math.floor(mins / 60) % 24
-    const m  = mins % 60
+    const h = Math.floor(mins / 60) % 24, m = mins % 60
     const ap = h >= 12 ? 'PM' : 'AM'
     const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h)
-    return `${h12}:${String(m).padStart(2, '0')} ${ap}`
+    return `${h12}:${String(m).padStart(2,'0')} ${ap}`
   }
-
   return { openMin, closeMin, openHour, durationH, isIF, fmt }
 }

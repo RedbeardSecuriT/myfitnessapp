@@ -306,6 +306,58 @@ export default function Workouts() {
                   )}
                 </div>
                 {e.note && <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.5 }}>{e.note}</div>}
+
+                {/* Cardio tracking — distance + inclination for treadmill, distance for bike */}
+                {isCardio && !isCooldown && (() => {
+                  const isTreadmill = e.name.includes('Treadmill') || e.name.includes('treadmill')
+                  const isBike      = e.name.includes('Bike') || e.name.includes('bike')
+                  if (!isTreadmill && !isBike) return null
+                  const key = `cardio-${activeTab}-${i}`
+                  const saved = data.progWeights?.[`${weekNum}-cardio-${activeTab}-${i}`] || {}
+                  return (
+                    <div style={{ marginTop:10, padding:10, background:'var(--faint)', borderRadius:8 }}>
+                      <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', marginBottom:8 }}>
+                        Session log
+                      </div>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        <div style={{ flex:1, minWidth:80 }}>
+                          <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>Distance (mi)</div>
+                          <input type="number" inputMode="decimal" step="0.1"
+                            placeholder={saved.distance || '0.0'}
+                            defaultValue={saved.distance || ''}
+                            onBlur={e2 => updateProgWeight(weekNum, `cardio-${activeTab}-${i}`, { ...saved, distance: e2.target.value })}
+                            style={{ width:'100%', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', color:'var(--accent)', fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:700, outline:'none', textAlign:'center' }} />
+                        </div>
+                        {isTreadmill && (
+                          <div style={{ flex:1, minWidth:80 }}>
+                            <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>Inclination (%)</div>
+                            <input type="number" inputMode="decimal" step="0.5"
+                              placeholder={saved.incline || '0'}
+                              defaultValue={saved.incline || ''}
+                              onBlur={e2 => updateProgWeight(weekNum, `cardio-${activeTab}-${i}`, { ...saved, incline: e2.target.value })}
+                              style={{ width:'100%', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', color:'var(--blue)', fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:700, outline:'none', textAlign:'center' }} />
+                          </div>
+                        )}
+                        <div style={{ flex:1, minWidth:80 }}>
+                          <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>Duration (min)</div>
+                          <input type="number" inputMode="numeric"
+                            placeholder={saved.duration || '0'}
+                            defaultValue={saved.duration || ''}
+                            onBlur={e2 => updateProgWeight(weekNum, `cardio-${activeTab}-${i}`, { ...saved, duration: e2.target.value })}
+                            style={{ width:'100%', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', color:'var(--amber)', fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:700, outline:'none', textAlign:'center' }} />
+                        </div>
+                      </div>
+                      {saved.distance && (
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:6 }}>
+                          Last: {saved.distance} mi
+                          {saved.incline ? ` · ${saved.incline}% incline` : ''}
+                          {saved.duration ? ` · ${saved.duration} min` : ''}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 {hasWeight && (
                   <div style={{ marginTop:10, padding:10, background:'var(--faint)', borderRadius:8 }}>
                     <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', marginBottom:6 }}>Weight used</div>
