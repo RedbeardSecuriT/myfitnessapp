@@ -9,7 +9,7 @@ const STEPS = [
   { id:'name',         type:'text',        q:"What's your name?",              hint:'We personalize everything for you.',                         placeholder:'Your first name',   validate: v => v.trim().length >= 2 },
   { id:'age',          type:'number',      q:'How old are you?',               hint:'Age helps calibrate caloric needs and recovery.',            placeholder:'e.g. 32',           validate: v => +v >= 16 && +v <= 80 },
   { id:'weights',      type:'two-number',  q:'Current and goal weight?',       hint:'Be honest — this sets your entire plan.',                    labels:['Current weight (lbs)','Goal weight (lbs)'], ids:['currentWeight','goalWeight'], placeholders:['e.g. 280','e.g. 220'], validate: v => v.currentWeight > 0 && v.goalWeight > 0 && v.currentWeight > v.goalWeight },
-  { id:'goalDate',     type:'chips-single',q:'Target date to hit your goal?',  hint:'Sets your weekly pace. Be ambitious but realistic.',         options:['3 months','6 months','9 months','Dec 2026','Custom'], validate: v => !!v },
+  { id:'goalDate', type:'date-picker', q:'Target date to hit your goal?', hint:'Your milestones, weekly pace, and AI plan are all built around this date. Be ambitious but realistic.', validate: v => !!v && v.length === 10 },
   { id:'medical',      type:'chips-multi', q:'Any medical conditions?',        hint:'Directly changes your workout and nutrition plan.',           options:['None','Hypoglycemia','Type 2 Diabetes','Type 1 Diabetes','Pre-diabetes','Asthma','Hypertension','High Cholesterol','Heart Disease','Anemia','PCOS','Hypothyroidism','Hyperthyroidism','Celiac Disease',"Crohn's / IBS",'GERD / Acid Reflux','Kidney Disease','Joint Pain / Arthritis','Osteoporosis','Lower Back Pain','Sleep Apnea','Depression / Anxiety','Fibromyalgia','High Uric Acid / Gout','Fatty Liver'], validate: v => v.length >= 1 },
   { id:'dietary',      type:'chips-multi', q:'Dietary restrictions?',          hint:'Your meal plan works around these.',                         options:['None','No pork','No red meat','No beef','No chicken','No fish','No shellfish','Vegetarian','Vegan','Pescatarian','Gluten intolerant','Lactose intolerant','No dairy','No eggs','Nut allergy','Soy allergy','Halal','Kosher','Low sodium','Low sugar'], validate: v => v.length >= 1 },
   { id:'favFoods',     type:'chips-multi', allowOther:true, q:'Foods you love?', hint:"We build meals around these.",                            options:['Eggs','Chicken breast','Chicken thighs','Ground turkey','Salmon','Tuna','Shrimp','Bacalao','Arroz blanco','Brown rice','Pasta','Habichuelas','Gandules','Platanos maduros','Tostones','Yuca','Chayote','Avocado / Aguacate','Mangoes','Bananas','Oats','Greek yogurt','Peanut butter','Arroz con pollo','Pernil','Sancocho','Wraps','Sandwiches'], validate: v => v.length >= 1 },
@@ -64,14 +64,8 @@ export default function Onboarding({ onComplete }) {
   })
 
   // Compute goal date from chips
-  const resolveGoalDate = (choice) => {
-    const now = new Date()
-    if (choice === '3 months')  { const d = new Date(now); d.setMonth(d.getMonth()+3);  return d.toISOString().split('T')[0] }
-    if (choice === '6 months')  { const d = new Date(now); d.setMonth(d.getMonth()+6);  return d.toISOString().split('T')[0] }
-    if (choice === '9 months')  { const d = new Date(now); d.setMonth(d.getMonth()+9);  return d.toISOString().split('T')[0] }
-    if (choice === 'Dec 2026')  return '2026-12-15'
-    return '2026-12-15'
-  }
+  // goalDate is now stored directly as YYYY-MM-DD from the date picker
+  const resolveGoalDate = (val) => val || '2026-12-15'
 
   const handleNext = async () => {
     if (step < activeSteps.length - 1) {
@@ -181,6 +175,47 @@ export default function Onboarding({ onComplete }) {
               onChange={e => set(id, e.target.value)} />
           </div>
         ))}
+
+        {cur?.type === 'date-picker' && (
+          <div>
+            {/* Quick presets */}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
+              {[
+                { label:'3 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+3); return d.toISOString().split('T')[0] } },
+                { label:'6 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+6); return d.toISOString().split('T')[0] } },
+                { label:'9 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+9); return d.toISOString().split('T')[0] } },
+                { label:'1 year',   fn: () => { const d=new Date(); d.setFullYear(d.getFullYear()+1); return d.toISOString().split('T')[0] } },
+                { label:'Dec 15, 2026', fn: () => '2026-12-15' },
+              ].map(p => {
+                const val = p.fn()
+                return (
+                  <button key={p.label}
+                    className={`ob-chip ${obData.goalDate === val ? 'selected' : ''}`}
+                    onClick={() => set('goalDate', val)}>
+                    {p.label}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Actual date input */}
+            <div style={{ fontSize:12, color:'var(--muted)', marginBottom:8, fontWeight:600 }}>Or pick a specific date:</div>
+            <input type="date" className="ob-input"
+              value={obData.goalDate || ''}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => set('goalDate', e.target.value)}
+              style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:700 }} />
+            {obData.goalDate && (
+              <div style={{ marginTop:12, padding:12, background:'rgba(0,200,150,.08)', border:'1px solid rgba(0,200,150,.2)', borderRadius:12 }}>
+                <div style={{ fontSize:13, color:'var(--accent)', fontWeight:600 }}>
+                  🎯 Goal: {new Date(obData.goalDate + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}
+                </div>
+                <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>
+                  {Math.max(0, Math.ceil((new Date(obData.goalDate) - new Date()) / (7 * 24 * 60 * 60 * 1000)))} weeks from today
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {cur?.type === 'chips-single' && (
           <div className="ob-chips">
