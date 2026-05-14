@@ -102,6 +102,7 @@ export default function Onboarding({ onComplete }) {
       additionalSports: (obData.additionalSports || []).filter(s => s !== 'None').join(', ') || 'None',
       sleepQuality: obData.sleepQuality, primaryGoal: obData.primaryGoal,
       planNotes: obData.planNotes || '',
+      _version: 3,  // bump AppContext.PROFILE_VERSION when adding required fields
       eatingSchedule: obData.eatingSchedule, ifWindow: obData.ifWindow || null, ifStart: obData.ifStart || null,
     }
 

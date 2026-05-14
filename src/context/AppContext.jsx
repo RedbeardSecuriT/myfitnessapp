@@ -2,6 +2,17 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { supabase } from '../lib/supabase'
 import { loadUserData, saveWater, saveGrocery, saveWorkoutProgress, saveProgWeight, saveCheckin } from '../lib/db'
 
+// Bump this whenever new required profile fields are added.
+// Any saved profile missing these fields triggers re-onboarding automatically.
+const PROFILE_VERSION = 3
+const REQUIRED_FIELDS  = ['currentWeight', 'goalWeight', 'goalDate', 'gymType', 'workoutTime', 'eatingSchedule']
+
+export function isProfileComplete(profile) {
+  if (!profile) return false
+  if ((profile._version || 0) < PROFILE_VERSION) return false
+  return REQUIRED_FIELDS.every(f => profile[f] != null && profile[f] !== '')
+}
+
 const AppContext = createContext(null)
 
 export function AppProvider({ children }) {
@@ -86,6 +97,8 @@ export function AppProvider({ children }) {
   }, [user])
 
   const updatePlan = useCallback((userProfile, generatedPlan) => {
+    // Stamp version so stale profiles auto-trigger re-onboarding
+    if (userProfile) userProfile._version = PROFILE_VERSION
     setData(d => ({ ...d, userProfile, generatedPlan }))
   }, [])
 

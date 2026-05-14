@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AppProvider, useApp } from './context/AppContext'
+import { AppProvider, useApp, isProfileComplete } from './context/AppContext'
 import LoginScreen from './components/LoginScreen'
 import Onboarding from './components/Onboarding'
 import Nav from './components/Nav'
@@ -18,7 +18,7 @@ function AppInner() {
   const [screen, setScreen]   = useState('today')
   const [showNotes, setNotes] = useState(false)
 
-  const needsOnboard = user && !loading && !data.userProfile
+  const needsOnboard = user && !loading && !isProfileComplete(data.userProfile)
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100dvh', background:'var(--bg)' }}>
