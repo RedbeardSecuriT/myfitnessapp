@@ -1,103 +1,70 @@
 {
-  "name": "Streak & Milestone Notifications",
+  "name": "Streak Notifications",
   "nodes": [
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }] }
+        "rule": { "interval": [{ "field": "weeks", "triggerAtHour": 9, "triggerAtDay": [1] }] }
       },
       "name": "Every Monday 9am",
       "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
       "position": [240, 300]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "WITH streak_calc AS (SELECT c.user_id, u.email, p.profile->>'name' as name, COUNT(*) FILTER (WHERE (c.data->'workouts'->>'a')::boolean OR (c.data->'workouts'->>'b')::boolean OR (c.data->'workouts'->>'c')::boolean OR (c.data->'workouts'->>'d')::boolean) as sessions_this_week, c.weight as latest_weight FROM public.checkins c JOIN auth.users u ON c.user_id = u.id JOIN public.user_profiles p ON c.user_id = p.user_id WHERE c.date >= NOW() - INTERVAL '7 days' GROUP BY c.user_id, u.email, p.profile) SELECT *, CASE WHEN sessions_this_week >= 4 THEN 'on_track' WHEN sessions_this_week >= 2 THEN 'partial' ELSE 'missed' END as week_status FROM streak_calc",
+        "method": "GET",
+        "url": "https://japan2026-backend-production.up.railway.app/users",
         "options": {}
       },
-      "name": "Get weekly performance",
-      "type": "n8n-nodes-base.postgres",
-      "position": [460, 300],
-      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+      "name": "Fetch All Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
+        "jsCode": "const users = $input.first().json.users || [];\nreturn users.map(u => ({ json: u }));"
       },
-      "name": "For each user",
-      "type": "n8n-nodes-base.splitInBatches",
+      "name": "Emit One Per User",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [680, 300]
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [{ "value1": "={{ $json.week_status }}", "operation": "equal", "value2": "on_track" }]
-        }
+        "method": "GET",
+        "url": "=https://japan2026-backend-production.up.railway.app/progress/{{ $json.userId }}",
+        "options": {}
       },
-      "name": "On track?",
-      "type": "n8n-nodes-base.if",
+      "name": "Fetch User Progress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [900, 300]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'streak_congrats', '🔥 {{ $json.name }}, you crushed it this week with {{ $json.sessions_this_week }} sessions! Keep the streak alive — open the app to check your plan.', NOW())",
-        "options": {}
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const d = item.json;\n  const name = d.userName || 'Athlete';\n  const sessions = d.weekSessions || 0;\n  const goalWeight = d.goalWeight || null;\n  const currentWeight = d.latestWeight || null;\n  const lbsLeft = (goalWeight && currentWeight) ? (currentWeight - goalWeight).toFixed(1) : null;\n\n  let msg;\n  if (sessions >= 4) {\n    msg = `🔥 ${name}, ${sessions} sessions this week — you're on track! ${lbsLeft ? `${lbsLeft} lbs from your goal.` : ''} Keep the streak alive.`;\n  } else if (sessions >= 2) {\n    msg = `💪 ${name}, good start (${sessions} sessions). ${4 - sessions} more this week to hit your target. You've got time.`;\n  } else {\n    msg = `⚡ ${name}, new week, clean slate. Your plan is ready — let's go!`;\n  }\n\n  // Milestone check — dynamic based on user's goal, not hardcoded weight\n  let milestoneMsg = null;\n  if (goalWeight && currentWeight) {\n    const pct = Math.round(((d.startWeight || currentWeight + 20) - currentWeight) / ((d.startWeight || currentWeight + 20) - goalWeight) * 100);\n    if (pct >= 25 && pct < 30) milestoneMsg = `🏆 ${name} — you just crossed 25% of the way to your goal!`;\n    if (pct >= 50 && pct < 55) milestoneMsg = `🏆 ${name} — HALFWAY THERE! Keep going.`;\n    if (pct >= 75 && pct < 80) milestoneMsg = `🏆 ${name} — 75% to goal. The finish line is real now.`;\n  }\n\n  results.push({ json: { userId: d.userId, msg, milestoneMsg } });\n}\n\nreturn results;"
       },
-      "name": "Send congrats notification",
-      "type": "n8n-nodes-base.postgres",
-      "position": [1120, 200],
-      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+      "name": "Build Notifications",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'streak_nudge', '💪 {{ $json.name }}, this week is still yours. You have {{ 7 - new Date().getDay() }} days left — {{ 4 - $json.sessions_this_week }} more sessions to hit your goal. You can do this.', NOW())",
-        "options": {}
+        "jsCode": "const items = $input.all();\nitems.forEach(i => console.log('Streak notification:', i.json.userId, i.json.msg));\nreturn items;"
       },
-      "name": "Send nudge notification",
-      "type": "n8n-nodes-base.postgres",
-      "position": [1120, 400],
-      "credentials": { "postgres": { "name": "Supabase Postgres" } }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "number": [
-            { "value1": "={{ $json.latest_weight }}", "operation": "smallerEqual", "value2": 325 },
-            { "value1": "={{ $json.latest_weight }}", "operation": "largerEqual", "value2": 320 }
-          ]
-        }
-      },
-      "name": "Hit 325 milestone?",
-      "type": "n8n-nodes-base.if",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1340, 300]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'milestone', '🏆 {{ $json.name }} — YOU HIT 325 LBS! First major milestone unlocked. Japan is getting closer. Keep going.', NOW()) ON CONFLICT DO NOTHING",
-        "options": {}
-      },
-      "name": "Send milestone notification",
-      "type": "n8n-nodes-base.postgres",
-      "position": [1560, 220],
-      "credentials": { "postgres": { "name": "Supabase Postgres" } }
     }
   ],
   "connections": {
-    "Every Monday 9am": { "main": [[{ "node": "Get weekly performance", "type": "main", "index": 0 }]] },
-    "Get weekly performance": { "main": [[{ "node": "For each user", "type": "main", "index": 0 }]] },
-    "For each user": { "main": [[{ "node": "On track?", "type": "main", "index": 0 }]] },
-    "On track?": {
-      "main": [
-        [{ "node": "Send congrats notification", "type": "main", "index": 0 }],
-        [{ "node": "Send nudge notification", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send congrats notification": { "main": [[{ "node": "Hit 325 milestone?", "type": "main", "index": 0 }]] },
-    "Send nudge notification": { "main": [[{ "node": "Hit 325 milestone?", "type": "main", "index": 0 }]] },
-    "Hit 325 milestone?": { "main": [[{ "node": "Send milestone notification", "type": "main", "index": 0 }], []] }
+    "Every Monday 9am":    { "main": [[{ "node": "Fetch All Users",       "type": "main", "index": 0 }]] },
+    "Fetch All Users":     { "main": [[{ "node": "Emit One Per User",     "type": "main", "index": 0 }]] },
+    "Emit One Per User":   { "main": [[{ "node": "Fetch User Progress",   "type": "main", "index": 0 }]] },
+    "Fetch User Progress": { "main": [[{ "node": "Build Notifications",   "type": "main", "index": 0 }]] },
+    "Build Notifications": { "main": [[{ "node": "Log Results",           "type": "main", "index": 0 }]] }
   }
 }
