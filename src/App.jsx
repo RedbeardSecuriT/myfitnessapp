@@ -3,23 +3,22 @@ import { AppProvider, useApp } from './context/AppContext'
 import LoginScreen from './components/LoginScreen'
 import Onboarding from './components/Onboarding'
 import Nav from './components/Nav'
+import Notifications from './components/Notifications'
 import Today from './screens/Today'
 import Workouts from './screens/Workouts'
 import Meals from './screens/Meals'
 import MealTracker from './screens/MealTracker'
 import Grocery from './screens/Grocery'
 import CheckIn from './screens/CheckIn'
+import Profile from './screens/Profile'
 import './styles/global.css'
 
 function AppInner() {
   const { user, loading, data, updatePlan } = useApp()
-  const [screen, setScreen] = useState('today')
+  const [screen, setScreen]   = useState('today')
+  const [showNotes, setNotes] = useState(false)
 
   const needsOnboard = user && !loading && !data.userProfile
-
-  const handleObComplete = (profile, plan) => {
-    if (profile && plan) updatePlan(profile, plan)
-  }
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100dvh', background:'var(--bg)' }}>
@@ -28,29 +27,27 @@ function AppInner() {
   )
 
   if (!user) return <LoginScreen />
-  if (needsOnboard) return <Onboarding onComplete={handleObComplete} />
+  if (needsOnboard) return <Onboarding onComplete={(profile, plan) => { if (profile && plan) updatePlan(profile, plan) }} />
 
   const screens = {
-    today:    <Today setScreen={setScreen} />,
+    today:    <Today setScreen={setScreen} onBell={() => setNotes(true)} />,
     workouts: <Workouts />,
     meals:    <Meals />,
     tracker:  <MealTracker />,
     grocery:  <Grocery />,
     checkin:  <CheckIn />,
+    profile:  <Profile setScreen={setScreen} />,
   }
 
   return (
     <>
-      {screens[screen]}
+      {screens[screen] || screens.today}
       <Nav screen={screen} setScreen={setScreen} />
+      {showNotes && <Notifications onClose={() => setNotes(false)} />}
     </>
   )
 }
 
 export default function App() {
-  return (
-    <AppProvider>
-      <AppInner />
-    </AppProvider>
-  )
+  return <AppProvider><AppInner /></AppProvider>
 }
