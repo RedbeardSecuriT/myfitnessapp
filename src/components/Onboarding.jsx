@@ -307,7 +307,7 @@ export default function Onboarding({ onComplete }) {
       {/* Header */}
       <div style={{ padding:'48px 24px 16px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <div className="syne fw8" style={{ fontSize:22 }}>Setup</div>
+          <div className="syne fw8" style={{ fontSize:22 }}>Setup <span style={{fontSize:11,color:'var(--accent)',fontWeight:400}}>v4</span></div>
           <div style={{ fontSize:12, color:'var(--muted)', fontFamily:"'Syne',sans-serif", fontWeight:700 }}>
             {step + 1} / {active.length}
           </div>
