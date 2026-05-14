@@ -1,0 +1,103 @@
+{
+  "name": "Streak & Milestone Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }] }
+      },
+      "name": "Every Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH streak_calc AS (SELECT c.user_id, u.email, p.profile->>'name' as name, COUNT(*) FILTER (WHERE (c.data->'workouts'->>'a')::boolean OR (c.data->'workouts'->>'b')::boolean OR (c.data->'workouts'->>'c')::boolean OR (c.data->'workouts'->>'d')::boolean) as sessions_this_week, c.weight as latest_weight FROM public.checkins c JOIN auth.users u ON c.user_id = u.id JOIN public.user_profiles p ON c.user_id = p.user_id WHERE c.date >= NOW() - INTERVAL '7 days' GROUP BY c.user_id, u.email, p.profile) SELECT *, CASE WHEN sessions_this_week >= 4 THEN 'on_track' WHEN sessions_this_week >= 2 THEN 'partial' ELSE 'missed' END as week_status FROM streak_calc",
+        "options": {}
+      },
+      "name": "Get weekly performance",
+      "type": "n8n-nodes-base.postgres",
+      "position": [460, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "For each user",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.week_status }}", "operation": "equal", "value2": "on_track" }]
+        }
+      },
+      "name": "On track?",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'streak_congrats', '🔥 {{ $json.name }}, you crushed it this week with {{ $json.sessions_this_week }} sessions! Keep the streak alive — open the app to check your plan.', NOW())",
+        "options": {}
+      },
+      "name": "Send congrats notification",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1120, 200],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'streak_nudge', '💪 {{ $json.name }}, this week is still yours. You have {{ 7 - new Date().getDay() }} days left — {{ 4 - $json.sessions_this_week }} more sessions to hit your goal. You can do this.', NOW())",
+        "options": {}
+      },
+      "name": "Send nudge notification",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1120, 400],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            { "value1": "={{ $json.latest_weight }}", "operation": "smallerEqual", "value2": 325 },
+            { "value1": "={{ $json.latest_weight }}", "operation": "largerEqual", "value2": 320 }
+          ]
+        }
+      },
+      "name": "Hit 325 milestone?",
+      "type": "n8n-nodes-base.if",
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'milestone', '🏆 {{ $json.name }} — YOU HIT 325 LBS! First major milestone unlocked. Japan is getting closer. Keep going.', NOW()) ON CONFLICT DO NOTHING",
+        "options": {}
+      },
+      "name": "Send milestone notification",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1560, 220],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every Monday 9am": { "main": [[{ "node": "Get weekly performance", "type": "main", "index": 0 }]] },
+    "Get weekly performance": { "main": [[{ "node": "For each user", "type": "main", "index": 0 }]] },
+    "For each user": { "main": [[{ "node": "On track?", "type": "main", "index": 0 }]] },
+    "On track?": {
+      "main": [
+        [{ "node": "Send congrats notification", "type": "main", "index": 0 }],
+        [{ "node": "Send nudge notification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send congrats notification": { "main": [[{ "node": "Hit 325 milestone?", "type": "main", "index": 0 }]] },
+    "Send nudge notification": { "main": [[{ "node": "Hit 325 milestone?", "type": "main", "index": 0 }]] },
+    "Hit 325 milestone?": { "main": [[{ "node": "Send milestone notification", "type": "main", "index": 0 }], []] }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "name": "Sunday Auto Plan Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * 0" }]
+        }
+      },
+      "name": "Every Sunday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.id as user_id, u.email, p.profile, p.generated_plan, array_agg(row_to_json(c.*) ORDER BY c.date DESC) FILTER (WHERE c.date IS NOT NULL) as recent_checkins FROM auth.users u JOIN public.user_profiles p ON u.id = p.user_id LEFT JOIN public.checkins c ON u.id = c.user_id AND c.date >= NOW() - INTERVAL '4 weeks' GROUP BY u.id, u.email, p.profile, p.generated_plan",
+        "options": {}
+      },
+      "name": "Get all users + recent checkins",
+      "type": "n8n-nodes-base.postgres",
+      "position": [460, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Process each user",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://japan2026-backend-production.up.railway.app/generate-week",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.user_id }}" },
+            { "name": "weekNum", "value": "={{ Math.floor((new Date() - new Date('2026-05-04')) / (7 * 24 * 60 * 60 * 1000)) + 1 }}" },
+            { "name": "profile", "value": "={{ $json.profile }}" },
+            { "name": "recentCheckins", "value": "={{ $json.recent_checkins }}" }
+          ]
+        }
+      },
+      "name": "Generate weekly plan via Railway",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.success }}", "value2": true }]
+        }
+      },
+      "name": "Plan generated successfully?",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.generated_plans (user_id, week_num, plan, generated_at) VALUES ('{{ $json.userId }}', {{ $json.weekNum }}, '{{ JSON.stringify($json.plan) }}'::jsonb, NOW()) ON CONFLICT (user_id, week_num) DO UPDATE SET plan = EXCLUDED.plan, generated_at = NOW()",
+        "options": {}
+      },
+      "name": "Save plan to Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1340, 220],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $('Process each user').item.json.user_id }}', 'weekly_plan', 'Your Week {{ $json.weekNum }} plan is ready! Open the app to see your personalized meals and workouts.', NOW())",
+        "options": {}
+      },
+      "name": "Log notification",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1560, 220],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every Sunday 8am": { "main": [[{ "node": "Get all users + recent checkins", "type": "main", "index": 0 }]] },
+    "Get all users + recent checkins": { "main": [[{ "node": "Process each user", "type": "main", "index": 0 }]] },
+    "Process each user": { "main": [[{ "node": "Generate weekly plan via Railway", "type": "main", "index": 0 }]] },
+    "Generate weekly plan via Railway": { "main": [[{ "node": "Plan generated successfully?", "type": "main", "index": 0 }]] },
+    "Plan generated successfully?": {
+      "main": [
+        [{ "node": "Save plan to Supabase", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Save plan to Supabase": { "main": [[{ "node": "Log notification", "type": "main", "index": 0 }]] }
+  }
+}
