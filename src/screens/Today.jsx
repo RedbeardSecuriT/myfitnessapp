@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { getProgramInfo, getIFWindow } from '../lib/program'
 import { getMealTimes } from '../lib/mealTimes'
 import WaterTracker from '../components/WaterTracker'
+import WeightLogger from '../components/WeightLogger'
 import StreakCard from '../components/StreakCard'
 import Milestones from '../components/Milestones'
 
@@ -159,6 +160,10 @@ export default function Today({ setScreen }) {
           <div className="syne fw7" style={{ fontSize:12, color:c.color, whiteSpace:'nowrap', marginLeft:8 }}>{c.time}</div>
         </div>
       ))}
+
+      {/* Quick weight log */}
+      <div className="section-label">⚖️ Today's weight</div>
+      <WeightLogger compact />
 
       {/* Water */}
       <div className="section-label">💧 Water intake</div>

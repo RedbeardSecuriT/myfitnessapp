@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { supabase, BACKEND_URL } from '../lib/supabase'
+import WeightLogger from '../components/WeightLogger'
 
 export default function Profile({ setScreen }) {
   const { user, data, signOut, reload } = useApp()
@@ -90,6 +91,10 @@ export default function Profile({ setScreen }) {
           </div>
         </>
       )}
+
+      {/* Weight logger */}
+      <div className="section-label">⚖️ Weight</div>
+      <WeightLogger />
 
       {/* Plan status */}
       <div className="section-label">🤖 AI Plan</div>
