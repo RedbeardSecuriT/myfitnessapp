@@ -1,0 +1,72 @@
+{
+  "name": "Weekly Check-In Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 10 * * 0" }] }
+      },
+      "name": "Every Sunday 10am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.user_id, u.email, p.profile->>'name' as name, c.weight, c.data, c.date, p.profile->>'goalWeight' as goal_weight FROM public.checkins c JOIN auth.users u ON c.user_id = u.id JOIN public.user_profiles p ON c.user_id = p.user_id WHERE c.date = CURRENT_DATE ORDER BY c.user_id",
+        "options": {}
+      },
+      "name": "Get today's check-ins",
+      "type": "n8n-nodes-base.postgres",
+      "position": [460, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "name": "For each check-in",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "claude-haiku-4-5-20251001" },
+            { "name": "max_tokens", "value": "500" },
+            { "name": "messages", "value": "=[{\"role\":\"user\",\"content\":\"Analyze this weekly fitness check-in and write a 2-sentence personalized coaching message. Be direct, specific, and motivating. User: {{ $json.name }}. Weight: {{ $json.weight }} lbs (goal: {{ $json.goal_weight }} lbs). Sessions completed: {{ Object.values($json.data.workouts || {}).filter(v=>v).length }}/6. Energy: {{ $json.data.energy }}/5. Wellbeing: {{ $json.data.well }}/5. Reflection: {{ $json.data.hard }}. Improvement areas: {{ $json.data.improve }}. Response must be under 100 words, personal, no fluff.\"}]" }
+          ]
+        }
+      },
+      "name": "Generate coaching message",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $('For each check-in').item.json.user_id }}', 'coaching', '{{ $json.content[0].text }}', NOW())",
+        "options": {}
+      },
+      "name": "Save coaching notification",
+      "type": "n8n-nodes-base.postgres",
+      "position": [1120, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every Sunday 10am": { "main": [[{ "node": "Get today's check-ins", "type": "main", "index": 0 }]] },
+    "Get today's check-ins": { "main": [[{ "node": "For each check-in", "type": "main", "index": 0 }]] },
+    "For each check-in": { "main": [[{ "node": "Generate coaching message", "type": "main", "index": 0 }]] },
+    "Generate coaching message": { "main": [[{ "node": "Save coaching notification", "type": "main", "index": 0 }]] }
+  }
+}

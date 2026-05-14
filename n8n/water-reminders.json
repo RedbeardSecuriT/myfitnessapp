@@ -1,0 +1,46 @@
+{
+  "name": "Daily Water Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 14 * * *" }] }
+      },
+      "name": "Every day 2pm",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT w.user_id, u.email, p.profile->>'name' as name, COALESCE(w.oz, 0) as oz_today FROM auth.users u JOIN public.user_profiles p ON u.id = p.user_id LEFT JOIN public.water_log w ON u.id = w.user_id AND w.date = CURRENT_DATE WHERE COALESCE(w.oz, 0) < 60",
+        "options": {}
+      },
+      "name": "Find under-hydrated users",
+      "type": "n8n-nodes-base.postgres",
+      "position": [460, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "name": "For each user",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.notifications (user_id, type, message, created_at) VALUES ('{{ $json.user_id }}', 'water_reminder', '💧 {{ $json.name }}, you''ve only logged {{ Math.round($json.oz_today) }} oz today — you need {{ 100 - Math.round($json.oz_today) }} more oz to hit your 100 oz goal. Grab a water bottle now!', NOW())",
+        "options": {}
+      },
+      "name": "Send water reminder",
+      "type": "n8n-nodes-base.postgres",
+      "position": [900, 300],
+      "credentials": { "postgres": { "name": "Supabase Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every day 2pm": { "main": [[{ "node": "Find under-hydrated users", "type": "main", "index": 0 }]] },
+    "Find under-hydrated users": { "main": [[{ "node": "For each user", "type": "main", "index": 0 }]] },
+    "For each user": { "main": [[{ "node": "Send water reminder", "type": "main", "index": 0 }]] }
+  }
+}
