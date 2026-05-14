@@ -9,7 +9,7 @@ const STEPS = [
   { id:'name',         type:'text',        q:"What's your name?",              hint:'We personalize everything for you.',                         placeholder:'Your first name',   validate: v => v.trim().length >= 2 },
   { id:'age',          type:'number',      q:'How old are you?',               hint:'Age helps calibrate caloric needs and recovery.',            placeholder:'e.g. 32',           validate: v => +v >= 16 && +v <= 80 },
   { id:'weights',      type:'two-number',  q:'Current and goal weight?',       hint:'Be honest — this sets your entire plan.',                    labels:['Current weight (lbs)','Goal weight (lbs)'], ids:['currentWeight','goalWeight'], placeholders:['e.g. 280','e.g. 220'], validate: v => v.currentWeight > 0 && v.goalWeight > 0 && v.currentWeight > v.goalWeight },
-  { id:'goalDate', type:'date-picker', q:'Target date to hit your goal?', hint:'Your milestones, weekly pace, and AI plan are all built around this date. Be ambitious but realistic.', validate: v => !!v && v.length === 10 },
+  { id:'goalDate', type:'date-picker', q:'Target date to hit your goal?', hint:'Pick a preset or choose a specific date. You can always change this later.', validate: v => true },  // non-blocking — defaults to 6 months if skipped
   { id:'medical',      type:'chips-multi', q:'Any medical conditions?',        hint:'Directly changes your workout and nutrition plan.',           options:['None','Hypoglycemia','Type 2 Diabetes','Type 1 Diabetes','Pre-diabetes','Asthma','Hypertension','High Cholesterol','Heart Disease','Anemia','PCOS','Hypothyroidism','Hyperthyroidism','Celiac Disease',"Crohn's / IBS",'GERD / Acid Reflux','Kidney Disease','Joint Pain / Arthritis','Osteoporosis','Lower Back Pain','Sleep Apnea','Depression / Anxiety','Fibromyalgia','High Uric Acid / Gout','Fatty Liver'], validate: v => v.length >= 1 },
   { id:'dietary',      type:'chips-multi', q:'Dietary restrictions?',          hint:'Your meal plan works around these.',                         options:['None','No pork','No red meat','No beef','No chicken','No fish','No shellfish','Vegetarian','Vegan','Pescatarian','Gluten intolerant','Lactose intolerant','No dairy','No eggs','Nut allergy','Soy allergy','Halal','Kosher','Low sodium','Low sugar'], validate: v => v.length >= 1 },
   { id:'favFoods',     type:'chips-multi', allowOther:true, q:'Foods you love?', hint:"We build meals around these.",                            options:['Eggs','Chicken breast','Chicken thighs','Ground turkey','Salmon','Tuna','Shrimp','Bacalao','Arroz blanco','Brown rice','Pasta','Habichuelas','Gandules','Platanos maduros','Tostones','Yuca','Chayote','Avocado / Aguacate','Mangoes','Bananas','Oats','Greek yogurt','Peanut butter','Arroz con pollo','Pernil','Sancocho','Wraps','Sandwiches'], validate: v => v.length >= 1 },
@@ -19,7 +19,7 @@ const STEPS = [
   { id:'homeDays',     type:'display-only',q:'Your workout split',             hint:'Based on your selections. You can always adjust.',           validate: () => true },
   { id:'fitnessLevel', type:'chips-single',q:'Current fitness level?',        hint:'Sets starting weights and cardio intensity.',                 options:['Complete beginner','Some experience (< 1 year)','Intermediate (1–3 years)','Advanced (3+ years)'], validate: v => !!v },
   { id:'trainingDays', type:'chips-single',q:'Total days per week you can train?', hint:'Gym + home combined.',                                   options:['2 days','3 days','4 days','5 days','6 days'], validate: v => !!v },
-  { id:'additionalSports', type:'chips-multi', allowOther:true, q:'Any additional sports or activities?', hint:'These get factored into your recovery and calorie needs.', options:['None','Martial arts / BJJ','Boxing','Muay Thai','Soccer / Fútbol','Basketball','Swimming','Cycling / biking','Running','Tennis','Yoga','Pilates','CrossFit','Rock climbing','Dancing'], validate: v => v.length >= 1 },
+  { id:'additionalSports', type:'chips-multi', allowOther:true, q:'Any additional sports or activities?', hint:'These get factored into your recovery and calorie needs. Skip if none.', options:['None','Martial arts / BJJ','Boxing','Muay Thai','Soccer / Fútbol','Basketball','Swimming','Cycling / biking','Running','Tennis','Yoga','Pilates','CrossFit','Rock climbing','Dancing'], validate: v => true },  // non-blocking
   { id:'workoutTime',  type:'chips-single',q:'Preferred workout time?',        hint:'Affects pre-workout meal and eating window timing.',          options:['Early morning (5–7am)','Morning (7–9am)','Midday (11am–1pm)','Early afternoon (2–4pm)','Late afternoon (4–6pm)','Evening (6–8pm)','Night (8–10pm)'], validate: v => !!v },
   { id:'sleepQuality', type:'chips-single',q:'How is your sleep?',             hint:'Sleep is when your body recovers and burns fat.',             options:['Great — 7–9h, wake rested','OK — 6–7h, sometimes tired','Poor — under 6h or restless','Night shifts / irregular'], validate: v => !!v },
   { id:'primaryGoal',  type:'chips-single',q:'Beyond weight — what matters most?', hint:'Shapes whether we prioritize strength, endurance, or energy.', options:['Feel more energetic daily','Get stronger','Improve cardiovascular health','Look better / body composition','Manage a health condition'], validate: v => !!v },
@@ -91,7 +91,7 @@ export default function Onboarding({ onComplete }) {
     const profile = {
       name: obData.name, age: +obData.age,
       currentWeight: +obData.currentWeight, goalWeight: +obData.goalWeight,
-      goalDate: resolveGoalDate(obData.goalDate),
+      goalDate: obData.goalDate || (() => { const d=new Date(); d.setMonth(d.getMonth()+6); return d.toISOString().split('T')[0] })(),
       programStart: today,
       medical: obData.medical || ['None'],
       dietary: obData.dietary || ['None'],
@@ -99,7 +99,7 @@ export default function Onboarding({ onComplete }) {
       gymType: obData.gymType, gymDays: obData.gymDays || [],
       fitnessLevel: obData.fitnessLevel,
       trainingDays: obData.trainingDays, workoutTime: obData.workoutTime,
-      additionalSports: (obData.additionalSports || []).filter(s => s !== 'None').join(', ') || 'None',
+      additionalSports: (obData.additionalSports || []).filter(s => s !== 'None').filter(s => s !== '__other__').concat(obData.additionalSports_other ? [obData.additionalSports_other] : []).join(', ') || 'None',
       sleepQuality: obData.sleepQuality, primaryGoal: obData.primaryGoal,
       planNotes: obData.planNotes || '',
       _version: 3,  // bump AppContext.PROFILE_VERSION when adding required fields
@@ -192,40 +192,43 @@ export default function Onboarding({ onComplete }) {
 
         {cur?.type === 'date-picker' && (
           <div>
-            {/* Quick presets */}
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:16 }}>
               {[
-                { label:'3 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+3); return d.toISOString().split('T')[0] } },
-                { label:'6 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+6); return d.toISOString().split('T')[0] } },
-                { label:'9 months', fn: () => { const d=new Date(); d.setMonth(d.getMonth()+9); return d.toISOString().split('T')[0] } },
-                { label:'1 year',   fn: () => { const d=new Date(); d.setFullYear(d.getFullYear()+1); return d.toISOString().split('T')[0] } },
-                { label:'Dec 15, 2026', fn: () => '2026-12-15' },
+                { label:'3 months 📅',   months: 3  },
+                { label:'6 months 📅',   months: 6  },
+                { label:'9 months 📅',   months: 9  },
+                { label:'1 year 📅',     months: 12 },
+                { label:'Dec 15 2026 🎯', iso: '2026-12-15' },
               ].map(p => {
-                const val = p.fn()
+                const d = new Date()
+                if (p.months) d.setMonth(d.getMonth() + p.months)
+                const val = p.iso || d.toISOString().split('T')[0]
+                const isSelected = obData.goalDate === val
                 return (
                   <button key={p.label}
-                    className={`ob-chip ${obData.goalDate === val ? 'selected' : ''}`}
+                    className={`ob-chip ${isSelected ? 'selected' : ''}`}
+                    style={{ fontSize:15, padding:'12px 18px' }}
                     onClick={() => set('goalDate', val)}>
                     {p.label}
                   </button>
                 )
               })}
             </div>
-            {/* Actual date input */}
-            <div style={{ fontSize:12, color:'var(--muted)', marginBottom:8, fontWeight:600 }}>Or pick a specific date:</div>
-            <input type="date" className="ob-input"
-              value={obData.goalDate || ''}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => set('goalDate', e.target.value)}
-              style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:700 }} />
-            {obData.goalDate && (
-              <div style={{ marginTop:12, padding:12, background:'rgba(0,200,150,.08)', border:'1px solid rgba(0,200,150,.2)', borderRadius:12 }}>
-                <div style={{ fontSize:13, color:'var(--accent)', fontWeight:600 }}>
-                  🎯 Goal: {new Date(obData.goalDate + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}
+            {obData.goalDate ? (
+              <div style={{ padding:14, background:'rgba(0,200,150,.08)', border:'1px solid rgba(0,200,150,.25)', borderRadius:14, marginTop:4 }}>
+                <div style={{ fontSize:14, color:'var(--accent)', fontWeight:700 }}>
+                  🎯 {new Date(obData.goalDate + 'T12:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })}
                 </div>
-                <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>
+                <div style={{ fontSize:12, color:'var(--muted)', marginTop:4 }}>
                   {Math.max(0, Math.ceil((new Date(obData.goalDate) - new Date()) / (7 * 24 * 60 * 60 * 1000)))} weeks from today
                 </div>
+                <button onClick={() => set('goalDate', '')} style={{ marginTop:8, background:'none', border:'none', color:'var(--muted)', fontSize:12, cursor:'pointer', padding:0 }}>
+                  ✕ Clear selection
+                </button>
+              </div>
+            ) : (
+              <div style={{ fontSize:12, color:'var(--muted)', padding:'10px 0' }}>
+                No date selected — will default to 6 months from today
               </div>
             )}
           </div>
