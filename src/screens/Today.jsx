@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { getProgramInfo, getIFWindow } from '../lib/program'
+import { getMealTimes } from '../lib/mealTimes'
 import WaterTracker from '../components/WaterTracker'
 import StreakCard from '../components/StreakCard'
 import Milestones from '../components/Milestones'
@@ -57,13 +58,15 @@ export default function Today({ setScreen }) {
   const lun = gen?.meals?.lunch?.[0]
 
   const isWorkoutDay = !info.isRestDay
+  const mt = getMealTimes(data.userProfile)
+
   const snackCard = isWorkoutDay
-    ? { time:'5:30 PM', icon:'⚠️', name:'Banana + Peanut Butter', macro:'PRE-WORKOUT — MANDATORY · ~240 kcal', color:'var(--red)' }
-    : { time:'3:00 PM', icon:'🍎', name:gen?.meals?.snacks?.[0]?.name||'Greek Yogurt + Banana', macro:gen?.meals?.snacks?.[0]?.macros||'Snack · ~200 kcal', color:'var(--amber)' }
+    ? { time: mt.preWorkoutTime, icon:'⚠️', name:'Banana + Peanut Butter', macro:`PRE-WORKOUT · 60 min before ${data.userProfile?.workoutTime || 'your workout'} · ~240 kcal`, color:'var(--red)' }
+    : { time: mt.restSnackTime,  icon:'🍎', name:gen?.meals?.snacks?.[0]?.name||'Greek Yogurt + Banana', macro:gen?.meals?.snacks?.[0]?.macros||'Snack · ~200 kcal', color:'var(--amber)' }
 
   const cards = [
-    { time: openFmt, icon:'🥣', name: bf?.name||(wIdx!==null?OAT_NAMES[dayOatIdx]+' Oats':'Rest day — no oat jar'), macro: bf?.macros||'Break-fast · ~400 kcal', color:'var(--accent)' },
-    { time:'1:00 PM', icon:'🍛', name: lun?.name||'Chicken + Rice Bowl', macro: lun?.macros||'Main meal · ~500 kcal', color:'var(--blue)' },
+    { time: openFmt,      icon:'🥣', name: bf?.name||(wIdx!==null?OAT_NAMES[dayOatIdx]+' Oats':'Rest day — no oat jar'), macro: bf?.macros||'Break-fast · ~400 kcal', color:'var(--accent)' },
+    { time: mt.lunchTime, icon:'🍛', name: lun?.name||'Chicken + Rice Bowl', macro: lun?.macros||'Main meal · ~500 kcal', color:'var(--blue)' },
     snackCard,
   ]
 

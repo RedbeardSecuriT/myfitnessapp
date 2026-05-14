@@ -130,7 +130,7 @@ export const RECIPES = [
     ],
   },
   {
-    emoji: '🌙', name: 'Dinner', sub: 'Post-workout recovery · Eat by 8:30pm gym days',
+    emoji: '🌙', name: 'Dinner', sub: 'Post-workout recovery · Timing set by your workout schedule',
     variants: [
       {
         name: 'Post-Workout Recovery Bowl', macros: '~480 kcal · 42g protein · 44g carbs · 10g fat',
