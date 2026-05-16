@@ -24,6 +24,8 @@ const STEPS = [
   { id:'avoidFoods',   type:'chips-multi', q:'Foods you hate or refuse to eat?',       hint:"These never appear in your plan.",               allowOther:true, options:['Nothing — I eat everything','Liver / organ meats','Sardines','Mushrooms','Beets','Brussels sprouts','Cottage cheese','Tofu','Quinoa','Chia seeds','Olives','Onions','Cilantro','Spicy food','Protein shakes / powders','Artificial sweeteners'], req: v => v.length >= 1 },
   { id:'gymType',      type:'chips-single',q:'What gym or equipment do you have access to?', hint:'Used to design your workout plan.',        options:['Planet Fitness','Full gym (other)','Gym + Home setup','Home — dumbbells only','Home — resistance bands','Home — no equipment','Outdoors / bodyweight only'], req: v => !!v },
   { id:'gymDays',      type:'gym-days',    q:'Which days can you go to the gym?',      hint:'Unchecked days = home workout. Sunday is always rest.', req: v => true },
+  { id:'preferredStores', type:'chips-multi', q:'Where do you usually grocery shop?', hint:'Your meal plan and grocery list will be built around what you can actually find nearby.', options:['Walmart PR','Costco','Sam\'s Club','Plaza del Caribe / Puerto Rico local','Pueblo Supermarkets','Supermax','Selectos','PriceSmart','Colmado / Local corner store','Amazon Fresh / Delivery'], req: v => v.length >= 1 },
+  { id:'workoutStructure', type:'chips-single', q:'How do you like to structure your workouts?', hint:'Your plan will match your natural flow.', options:['Cardio first, then weights','Weights first, then cardio','Cardio only','Weights only','Circuit / mixed throughout','Whatever the plan says — I\'m flexible'], req: v => !!v },
   { id:'fitnessLevel', type:'chips-single',q:'Current fitness level?',                 hint:'Sets starting weights and cardio intensity.',    options:['Complete beginner','Some experience (< 1 year)','Intermediate (1–3 years)','Advanced (3+ years)'], req: v => !!v },
   { id:'trainingDays', type:'chips-single',q:'Total days per week you can train?',     hint:'Gym + home combined.',                           options:['2 days','3 days','4 days','5 days','6 days'], req: v => !!v },
   { id:'additionalSports', type:'chips-multi', q:'Additional sports or activities?',   hint:'Factored into your recovery and calorie needs. Select None if not applicable.', allowOther:true, options:['None','Martial arts / BJJ','Boxing','Muay Thai','Soccer / Fútbol','Basketball','Swimming','Cycling / biking','Running','Tennis','Yoga','Pilates','CrossFit','Rock climbing','Dancing'], req: v => v.length >= 1 },
@@ -115,6 +117,8 @@ export default function Onboarding({ onComplete }) {
       additionalSports: sports.join(', ') || 'None',
       workoutTime: data.workoutTime, sleepQuality: data.sleepQuality, primaryGoal: data.primaryGoal,
       planNotes: data.planNotes || '',
+      preferredStores: (data.preferredStores || []).join(', ') || 'Walmart PR, Colmado',
+      workoutStructure: data.workoutStructure || 'Flexible',
       eatingSchedule: data.eatingSchedule, ifWindow: data.ifWindow || null, ifStart: data.ifStart || null,
     }
 

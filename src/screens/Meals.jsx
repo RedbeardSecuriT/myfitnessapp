@@ -20,7 +20,7 @@ export default function Meals() {
           let steps   = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean)
           if (steps.length <= 1) steps = raw.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 4)
           if (!steps.length) steps = [raw]
-          return { name: meal.name || name, macros: meal.macros || '', ingredients: [], steps }
+          return { name: meal.name || name, macros: meal.macros || '', ingredients: meal.ingredients || [], steps }
         })
       }
     }
@@ -76,7 +76,7 @@ export default function Meals() {
           {cat.variants.map((v, i) => (
             <button key={i} className={`tab-chip ${varIdx===i?'active':''}`} onClick={() => setVarIdx(i)}
               style={{ fontSize:12, padding:'6px 12px' }}>
-              {v.name.split(' ').slice(0,2).join(' ')}
+              {(() => { const words = v.name.split(' '); const allNames = cat.variants.map(x => x.name); const firstWord = allNames[0]?.split(' ')[0]; const allSameFirst = allNames.every(n => n.startsWith(firstWord)); return allSameFirst ? words.slice(-2).join(' ') : words.slice(0,2).join(' '); })()}
             </button>
           ))}
         </div>
@@ -108,8 +108,25 @@ export default function Meals() {
             </>
           )}
 
-          {!vr.ingredients?.length && (
-            <div style={{ fontSize:12, color:'var(--muted)', marginBottom:14 }}>Ingredients included in meal instructions.</div>
+          {vr.ingredients?.length > 0 && (
+            <>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', marginBottom:10 }}>Ingredients</div>
+              <div style={{ marginBottom:16, borderRadius:10, overflow:'hidden', border:'1px solid var(--border)' }}>
+                {vr.ingredients.map((ing, ii) => (
+                  <div key={ii} style={{
+                    display:'flex', alignItems:'center', gap:12,
+                    padding:'10px 14px',
+                    background: ii % 2 === 0 ? 'var(--faint)' : 'transparent',
+                    borderBottom: ii < vr.ingredients.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, color:'var(--accent)', minWidth:60, flexShrink:0 }}>
+                      {ing.qty || ing.amount || '—'}
+                    </div>
+                    <div style={{ fontSize:14 }}>{ing.item || ing.name}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', marginBottom:10 }}>Steps</div>
