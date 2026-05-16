@@ -10,9 +10,30 @@ export default function Grocery() {
     if (!plan?.grocery || Object.keys(plan).length === 0) return GROCERY
     const g = plan.grocery
     const result = []
-    if (g.costco?.length) result.push({ cat:'🔵 COSTCO', store:'costco', items: g.costco.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
-    if (g.walmart?.length) result.push({ cat:'🟢 WALMART PR', store:'walmart', items: g.walmart.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
-    if (g.colmado?.length) result.push({ cat:'🟡 COLMADO', store:'colmado', items: g.colmado.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
+    // Map generated store sections to user's preferred stores
+    const preferred = (data.userProfile?.preferredStores || '').split(',').map(s => s.trim()).filter(Boolean)
+    const storeEmoji = s => {
+      const sl = s.toLowerCase()
+      if (sl.includes('costco')) return '🔵'
+      if (sl.includes('walmart')) return '🟢'
+      if (sl.includes('sam')) return '🔵'
+      if (sl.includes('pueblo')) return '🟠'
+      if (sl.includes('supermax')) return '🟣'
+      if (sl.includes('selectos')) return '🟤'
+      if (sl.includes('pricesmart')) return '🟡'
+      if (sl.includes('colmado') || sl.includes('corner')) return '🟡'
+      if (sl.includes('amazon')) return '📦'
+      return '🛒'
+    }
+    // Map backend store keys to user's actual chosen stores
+    const storeMap = {
+      costco:  preferred[0] || 'Preferred Store 1',
+      walmart: preferred[1] || 'Preferred Store 2',
+      colmado: preferred[2] || 'Local Store',
+    }
+    if (g.costco?.length)  result.push({ cat:`${storeEmoji(storeMap.costco)} ${storeMap.costco.toUpperCase()}`, store:'costco',  items: g.costco.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
+    if (g.walmart?.length) result.push({ cat:`${storeEmoji(storeMap.walmart)} ${storeMap.walmart.toUpperCase()}`, store:'walmart', items: g.walmart.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
+    if (g.colmado?.length) result.push({ cat:`${storeEmoji(storeMap.colmado)} ${storeMap.colmado.toUpperCase()}`, store:'colmado', items: g.colmado.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
     return result.length ? result : GROCERY
   }, [data.generatedPlan])
 

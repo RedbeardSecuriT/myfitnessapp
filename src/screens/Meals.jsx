@@ -88,25 +88,7 @@ export default function Meals() {
           <div style={{ fontWeight:700, fontSize:16, marginBottom:6 }}>{vr.name}</div>
           {vr.macros && <div className="badge badge-amber" style={{ marginBottom:14 }}>{vr.macros}</div>}
 
-          {vr.ingredients?.length > 0 && (
-            <>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', marginBottom:10 }}>Ingredients</div>
-              <table style={{ width:'100%', borderCollapse:'collapse', marginBottom:16 }}>
-                <thead>
-                  <tr>{['Amount','Ingredient','Store · Est. Cost'].map(h => <th key={h} style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--muted)', paddingBottom:8 }}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {vr.ingredients.map((ing, i) => (
-                    <tr key={i} style={{ borderTop:'1px solid var(--border)' }}>
-                      <td style={{ padding:'10px 0', fontSize:13, color:'var(--accent)', fontWeight:600, whiteSpace:'nowrap', paddingRight:12 }}>{ing.amt}</td>
-                      <td style={{ padding:'10px 0', fontSize:13, paddingRight:12 }}>{ing.name}</td>
-                      <td style={{ padding:'10px 0', fontSize:11, color:'var(--muted)' }}>{ing.store}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
+
 
           {vr.ingredients?.length > 0 && (
             <>

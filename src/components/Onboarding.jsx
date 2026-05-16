@@ -10,7 +10,6 @@ const DATE_PRESETS = [
   { label:'6 months',     months: 6  },
   { label:'9 months',     months: 9  },
   { label:'1 year',       months: 12 },
-  { label:'Dec 15, 2026', iso: '2026-12-15' },
 ]
 
 const STEPS = [
