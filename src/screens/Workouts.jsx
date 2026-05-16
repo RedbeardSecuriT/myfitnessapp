@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+
+const DOW_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 import { useApp } from '../context/AppContext'
 import { getProgramInfo } from '../lib/program'
 import { WORKOUTS } from '../data/workouts'
