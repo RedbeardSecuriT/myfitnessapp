@@ -74,7 +74,8 @@ export default function Today({ setScreen }) {
   // Day progress bar
   const dayBars = [0,1,2,3,4,5].map(i => {
     const today = new Date(); today.setHours(0,0,0,0)
-    const d = new Date(today); d.setDate(today.getDate() - (info.dayOfWeek===0?6:info.dayOfWeek-1) + i)
+    // dow is Mon=0...Sun=6, so Monday of this week = today - dow days
+    const d = new Date(today); d.setDate(today.getDate() - (info.dow || 0) + i)
     const key = `${d.toISOString().split('T')[0]}-${i}`
     const prog = data.workoutProgress?.[key] || {}
     const done = Object.values(prog).filter(Boolean).length

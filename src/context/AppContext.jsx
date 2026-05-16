@@ -99,7 +99,9 @@ export function AppProvider({ children }) {
   const updatePlan = useCallback((userProfile, generatedPlan) => {
     // Stamp version so stale profiles auto-trigger re-onboarding
     if (userProfile) userProfile._version = PROFILE_VERSION
-    setData(d => ({ ...d, userProfile, generatedPlan }))
+    // Normalize plan — handle any new keys the backend might add without crashing
+    const safePlan = generatedPlan && typeof generatedPlan === 'object' ? generatedPlan : null
+    setData(d => ({ ...d, userProfile, generatedPlan: safePlan }))
   }, [])
 
   const signOut = () => supabase.auth.signOut()

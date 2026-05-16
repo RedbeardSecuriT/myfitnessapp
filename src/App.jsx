@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AppProvider, useApp, isProfileComplete } from './context/AppContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import LoginScreen from './components/LoginScreen'
 import Onboarding from './components/Onboarding'
 import Nav from './components/Nav'
@@ -49,5 +50,5 @@ function AppInner() {
 }
 
 export default function App() {
-  return <AppProvider><AppInner /></AppProvider>
+  return <ErrorBoundary><AppProvider><AppInner /></AppProvider></ErrorBoundary>
 }
