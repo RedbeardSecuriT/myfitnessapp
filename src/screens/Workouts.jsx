@@ -281,7 +281,10 @@ export default function Workouts() {
           {/* Exercises */}
           {w.exercises.map((e, i) => {
             const isHeader   = e.name.startsWith('—')
-            const isCardio   = e.name.startsWith('🏃') || e.name.startsWith('🚴') || e.name.startsWith('🔄') || e.name.startsWith('🔵')
+            const nameLower  = e.name.toLowerCase()
+            const isCardio   = e.name.startsWith('🏃') || e.name.startsWith('🚴') || e.name.startsWith('🔄') || e.name.startsWith('🔵') ||
+                               nameLower.includes('treadmill') || nameLower.includes('cardio') || nameLower.includes('bike') ||
+                               nameLower.includes('cycling') || nameLower.includes('walk') || nameLower.includes('run')
             const isCooldown = e.name.startsWith('Cool')
             const isDone     = progress[i]?.done
             const isSkipped  = progress[i]?.skip
@@ -311,8 +314,8 @@ export default function Workouts() {
 
                 {/* Cardio tracking */}
                 {isCardio && !isCooldown && (() => {
-                  const isTreadmill = e.name.toLowerCase().includes('treadmill')
-                  const isBike      = e.name.toLowerCase().includes('bike')
+                  const isTreadmill = nameLower.includes('treadmill') || nameLower.includes('walk')
+                  const isBike      = nameLower.includes('bike') || nameLower.includes('cycling')
                   if (!isTreadmill && !isBike) return null
                   const cKey   = `cardio-${activeTab}-${i}`
                   const saved  = data.progWeights?.[`${weekNum}-${cKey}`] || {}

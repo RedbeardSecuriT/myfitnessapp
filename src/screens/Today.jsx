@@ -66,7 +66,20 @@ export default function Today({ setScreen }) {
     : { time: mt.restSnackTime,  icon:'🍎', name:gen?.meals?.snacks?.[0]?.name||'Greek Yogurt + Banana', macro:gen?.meals?.snacks?.[0]?.macros||'Snack · ~200 kcal', color:'var(--amber)' }
 
   const cards = [
-    { time: openFmt,      icon:'🥣', name: bf?.name||(info.dow <= 4 ? OAT_NAMES[dayOatIdx]+' Oats' : info.isRestDay ? 'Rest day — no oat jar' : 'No oat jar today — enjoy a hot breakfast'), macro: bf?.macros||'Break-fast · ~400 kcal', color:'var(--accent)' },
+    { time: openFmt,      icon:'🥣', name: (() => {
+        const oats = gen?.meals?.oats
+        if (!oats) return info.dow <= 4 ? OAT_NAMES[dayOatIdx]+' Oats' : 'No oat jar today'
+        // oats can be array of {day, name} or legacy flat array
+        if (Array.isArray(oats) && oats[0]?.day) {
+          const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
+          const todayOat = oats.find(o => o.day === dayNames[info.dow])
+          return info.dow <= 4
+            ? (todayOat?.name || bf?.name || 'Overnight Oats')
+            : (info.isRestDay ? 'Rest day — no oat jar' : 'No oat jar today — enjoy a hot breakfast')
+        }
+        // legacy: just use bf.name or first oat
+        return bf?.name || (info.dow <= 4 ? (oats[info.dow]?.name || OAT_NAMES[dayOatIdx]+' Oats') : 'No oat jar today')
+      })(), macro: bf?.macros||'Break-fast · ~400 kcal', color:'var(--accent)' },
     { time: mt.lunchTime, icon:'🍛', name: lun?.name||'Chicken + Rice Bowl', macro: lun?.macros||'Main meal · ~500 kcal', color:'var(--blue)' },
     snackCard,
   ]

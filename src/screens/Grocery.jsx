@@ -11,7 +11,11 @@ export default function Grocery() {
     const g = plan.grocery
     const result = []
     // Map generated store sections to user's preferred stores
-    const preferred = (data.userProfile?.preferredStores || '').split(',').map(s => s.trim()).filter(Boolean)
+    // preferredStores can be array (from profile) or comma string (legacy)
+    const rawStores = data.userProfile?.preferredStores
+    const preferred = Array.isArray(rawStores)
+      ? rawStores.map(s => s.trim()).filter(Boolean)
+      : (rawStores || '').split(',').map(s => s.trim()).filter(Boolean)
     const storeEmoji = s => {
       const sl = s.toLowerCase()
       if (sl.includes('costco')) return '🔵'

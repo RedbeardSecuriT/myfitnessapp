@@ -25,8 +25,30 @@ export default function Meals() {
       }
     }
 
+    // Oats — merge daily oat jars into breakfast variants with day labels
+    const oatVariants = (plan.meals.oats || []).map(o => {
+      const raw = o.instructions || 'Prepare as described.'
+      let steps = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean)
+      if (steps.length <= 1) steps = raw.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 4)
+      if (!steps.length) steps = [raw]
+      return { name: o.name || 'Overnight Oats', tabLabel: o.day ? o.day.slice(0,3) : '', macros: o.macros || '', ingredients: o.ingredients || [], steps }
+    })
+
+    const breakfastVariants = [
+      ...oatVariants,
+      ...(plan.meals.breakfast || []).map(meal => {
+        const raw = meal.instructions || 'Prepare as described.'
+        let steps = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean)
+        if (steps.length <= 1) steps = raw.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 4)
+        if (!steps.length) steps = [raw]
+        return { name: meal.name || 'Breakfast', macros: meal.macros || '', ingredients: meal.ingredients || [], steps }
+      })
+    ]
+
+    const bfCat = breakfastVariants.length > 0 ? { emoji:'🥣', name:'Breakfast', sub:'Overnight oats by day + breakfast options', variants: breakfastVariants } : null
+
     return [
-      tocat('🥣','Breakfast','Your personalized breakfast options', plan.meals.breakfast),
+      bfCat,
       tocat('🍛','Lunch','Your personalized lunch options', plan.meals.lunch),
       tocat('🍎','Snacks','Quick healthy options', plan.meals.snacks),
       tocat('🌙','Dinner','Your personalized dinner options', plan.meals.dinner),
@@ -76,7 +98,7 @@ export default function Meals() {
           {cat.variants.map((v, i) => (
             <button key={i} className={`tab-chip ${varIdx===i?'active':''}`} onClick={() => setVarIdx(i)}
               style={{ fontSize:12, padding:'6px 12px' }}>
-              {(() => { const words = v.name.split(' '); const allNames = cat.variants.map(x => x.name); const firstWord = allNames[0]?.split(' ')[0]; const allSameFirst = allNames.every(n => n.startsWith(firstWord)); return allSameFirst ? words.slice(-2).join(' ') : words.slice(0,2).join(' '); })()}
+              {v.tabLabel || (() => { const words = v.name.split(' '); const allNames = cat.variants.map(x => x.name); const firstWord = allNames[0]?.split(' ')[0]; const allSameFirst = allNames.every(n => n.startsWith(firstWord)); return allSameFirst ? words.slice(-2).join(' ') : words.slice(0,2).join(' '); })()}
             </button>
           ))}
         </div>
