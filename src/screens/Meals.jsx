@@ -2,26 +2,6 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import { RECIPES } from '../data/recipes'
 
-// Milk keywords to detect and replace in ingredient names
-const MILK_PATTERNS = [
-  /unsweetened almond milk/gi,
-  /almond milk/gi,
-  /oat milk/gi,
-  /soy milk/gi,
-  /unsweetened soy milk/gi,
-  /whole milk/gi,
-  /2%\s*milk/gi,
-  /skim milk/gi,
-  /low-fat milk/gi,
-  /non-fat milk/gi,
-  /lactaid/gi,
-  /light coconut milk/gi,
-  /coconut milk/gi,
-  /plant-based milk/gi,
-  /dairy-free milk/gi,
-  /\bmilk\b/gi,
-]
-
 const MILK_LABELS = {
   whole:   'whole milk',
   '2pct':  '2% milk',
@@ -34,15 +14,15 @@ const MILK_LABELS = {
   none:    null,
 }
 
+// Single combined regex — ordered specific→generic so each span is matched once.
+// This prevents the double-replacement bug ("oat milk" → "oat oat milk").
+const MILK_COMBINED = /unsweetened almond milk|almond milk|oat milk|unsweetened soy milk|soy milk|whole milk|2%\s*milk|low-fat milk|non-fat milk|skim milk|lactaid milk|lactaid|light coconut milk|coconut milk|plant.based milk|dairy.free milk|\bmilk\b/gi
+
 function applyMilkPref(text, milkPref) {
   if (!milkPref || milkPref === 'none' || !text) return text
   const replacement = MILK_LABELS[milkPref]
   if (!replacement) return text
-  let result = text
-  for (const pat of MILK_PATTERNS) {
-    result = result.replace(pat, replacement)
-  }
-  return result
+  return text.replace(MILK_COMBINED, replacement)
 }
 
 export default function Meals() {
