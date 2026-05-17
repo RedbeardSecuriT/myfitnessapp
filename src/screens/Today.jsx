@@ -66,9 +66,20 @@ export default function Today({ setScreen }) {
   const isWorkoutDay = !info.isRestDay
   const mt = getMealTimes(data.userProfile, info.dow)
 
-  const snackCard = isWorkoutDay
+  // Find a rest-appropriate snack — skip any with pre-workout language
+  const PRE_WORKOUT_KEYWORDS = ['pre-workout','preworkout','mandatory','before workout','before your workout']
+  const isPreWorkoutSnack = (s) => {
+    if (!s?.name) return false
+    const n = (s.name + ' ' + (s.macros||'')).toLowerCase()
+    return PRE_WORKOUT_KEYWORDS.some(k => n.includes(k))
+  }
+  const snacks = gen?.meals?.snacks || []
+  const restSnack = snacks.find(s => !isPreWorkoutSnack(s)) || snacks[1] || snacks[0]
+
+  // Sunday is always rest — never show a pre-workout snack
+  const snackCard = (isWorkoutDay && !isSun)
     ? { time: mt.preWorkoutTime, icon:'⚠️', name:'Banana + Peanut Butter', macro:`PRE-WORKOUT · 60 min before ${data.userProfile?.workoutTime || 'your workout'} · ~240 kcal`, color:'var(--red)' }
-    : { time: mt.restSnackTime,  icon:'🍎', name:gen?.meals?.snacks?.[0]?.name||'Greek Yogurt + Banana', macro:gen?.meals?.snacks?.[0]?.macros||'Snack · ~200 kcal', color:'var(--amber)' }
+    : { time: mt.restSnackTime,  icon:'🍎', name: restSnack?.name || 'Greek Yogurt + Banana', macro: restSnack?.macros || 'Rest day snack · ~200 kcal', color:'var(--amber)' }
 
   // Weekend warm breakfast: index 0 = Saturday, index 1 = Sunday
   const satBf  = gen?.meals?.breakfast?.[0]
