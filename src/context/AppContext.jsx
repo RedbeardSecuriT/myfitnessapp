@@ -104,13 +104,28 @@ export function AppProvider({ children }) {
     setData(d => ({ ...d, userProfile, generatedPlan: safePlan }))
   }, [])
 
+  const saveProfile = useCallback(async (updatedProfile) => {
+    // Stamp current version so isProfileComplete() keeps passing
+    updatedProfile._version = PROFILE_VERSION
+    // Update context immediately so UI reflects changes without a reload
+    setData(d => ({ ...d, userProfile: updatedProfile }))
+    if (user) {
+      setSyncing(true)
+      // Only update the profile column — leaves generated_plan intact
+      await supabase.from('user_profiles')
+        .update({ profile: updatedProfile })
+        .eq('user_id', user.id)
+      setSyncing(false)
+    }
+  }, [user])
+
   const signOut = () => supabase.auth.signOut()
 
   return (
     <AppContext.Provider value={{
       user, loading, syncing, data,
       addWater, resetWater, toggleGrocery,
-      updateWorkout, updateProgWeight, submitCheckin, updatePlan,
+      updateWorkout, updateProgWeight, submitCheckin, updatePlan, saveProfile,
       signOut, reload: () => user && loadData(user.id),
     }}>
       {children}
