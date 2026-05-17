@@ -1,10 +1,9 @@
 // ── Week/day calculations ─────────────────────────────────────────────────────
 // Week always starts Monday, ends Sunday.
-// GLOBAL week number: all users share the same week count from the app's
-// launch date (May 4 2026). A user joining in week 10 is IN week 10,
-// not week 1. This keeps the community in sync.
+// Week number is PERSONAL — counted from each user's programStart date.
+// A user who joins today is on week 1 of their own program.
 
-const GLOBAL_LAUNCH = new Date('2026-05-04') // Must be a Monday
+const GLOBAL_LAUNCH = new Date('2026-05-04') // Fallback for users without programStart
 
 export function getProgramInfo(date = new Date(), userProfile = null) {
   const d = new Date(date)
@@ -22,9 +21,20 @@ export function getProgramInfo(date = new Date(), userProfile = null) {
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
 
-  // Global week number — same for ALL users regardless of when they joined
+  // Personal week number: counted from user's programStart, not global launch
+  // programStart is stamped at onboarding — new user always starts on week 1
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const weekNum   = Math.max(1, Math.floor((weekStart - GLOBAL_LAUNCH) / msPerWeek) + 1)
+  const epoch = (() => {
+    const ps = userProfile?.programStart
+    if (!ps) return GLOBAL_LAUNCH
+    // Snap programStart back to its Monday so week boundaries align
+    const psDate = new Date(ps)
+    psDate.setHours(0, 0, 0, 0)
+    const psDow = psDate.getDay() === 0 ? 6 : psDate.getDay() - 1
+    psDate.setDate(psDate.getDate() - psDow)
+    return psDate
+  })()
+  const weekNum = Math.max(1, Math.floor((weekStart - epoch) / msPerWeek) + 1)
 
   const fmt = dt => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
