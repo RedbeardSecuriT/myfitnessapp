@@ -96,13 +96,22 @@ export function AppProvider({ children }) {
     if (user) { setSyncing(true); await saveCheckin(user.id, date, weight, checkData); setSyncing(false) }
   }, [user])
 
-  const updatePlan = useCallback((userProfile, generatedPlan) => {
+  const updatePlan = useCallback(async (userProfile, generatedPlan) => {
     // Stamp version so stale profiles auto-trigger re-onboarding
     if (userProfile) userProfile._version = PROFILE_VERSION
     // Normalize plan — handle any new keys the backend might add without crashing
     const safePlan = generatedPlan && typeof generatedPlan === 'object' ? generatedPlan : null
+    // Update context immediately
     setData(d => ({ ...d, userProfile, generatedPlan: safePlan }))
-  }, [])
+    // Persist to Supabase so loadData on re-auth doesn't roll back to old plan
+    if (user && safePlan) {
+      setSyncing(true)
+      await supabase.from('user_profiles')
+        .update({ generated_plan: safePlan, profile: userProfile })
+        .eq('user_id', user.id)
+      setSyncing(false)
+    }
+  }, [user])
 
   const saveProfile = useCallback(async (updatedProfile) => {
     // Stamp current version so isProfileComplete() keeps passing
