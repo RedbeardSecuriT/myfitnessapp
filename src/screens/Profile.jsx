@@ -62,8 +62,8 @@ export default function Profile({ setScreen }) {
 
       {/* Stats row */}
       <div className="card flex-between" style={{ marginBottom:16 }}>
-        {stat('Current weight', currentWeight !== '—' ? currentWeight + ' lbs' : '—')}
-        {stat('Goal weight', (profile?.goalWeight || '—') + (profile?.goalWeight ? ' lbs' : ''))}
+        {stat('Current weight', currentWeight !== '—' ? currentWeight + ' ' + (profile?.unitSystem === 'metric' ? 'kg' : 'lbs') : '—')}
+        {stat('Goal weight', (profile?.goalWeight || '—') + (profile?.goalWeight ? ' ' + (profile?.unitSystem === 'metric' ? 'kg' : 'lbs') : ''))}
         {stat('Lbs lost', lostSoFar)}
         {stat('Check-ins', checkinCount)}
       </div>

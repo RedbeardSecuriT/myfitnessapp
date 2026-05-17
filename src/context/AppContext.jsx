@@ -4,8 +4,8 @@ import { loadUserData, saveWater, saveGrocery, saveWorkoutProgress, saveProgWeig
 
 // Bump this whenever new required profile fields are added.
 // Any saved profile missing these fields triggers re-onboarding automatically.
-const PROFILE_VERSION = 3
-const REQUIRED_FIELDS  = ['currentWeight', 'goalWeight', 'goalDate', 'gymType', 'workoutTime', 'eatingSchedule']
+const PROFILE_VERSION = 4
+const REQUIRED_FIELDS  = ['currentWeight', 'goalWeight', 'goalDate', 'gymType', 'workoutTime', 'eatingSchedule', 'location', 'unitSystem']
 
 export function isProfileComplete(profile) {
   if (!profile) return false

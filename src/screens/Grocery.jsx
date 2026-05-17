@@ -30,14 +30,20 @@ export default function Grocery() {
       return '🛒'
     }
     // Map backend store keys to user's actual chosen stores
-    const storeMap = {
-      costco:  preferred[0] || 'Preferred Store 1',
-      walmart: preferred[1] || 'Preferred Store 2',
-      colmado: preferred[2] || 'Local Store',
+    // Support both new keys (store1/store2/store3) and legacy (costco/walmart/colmado)
+    const s1name = preferred[0] || 'Store 1'
+    const s2name = preferred[1] || 'Store 2'
+    const s3name = preferred[2] || 'Local Store'
+    const push = (items, storeName, key) => {
+      if (items?.length) result.push({
+        cat: `${storeEmoji(storeName)} ${storeName.toUpperCase()}`,
+        store: key,
+        items: items.map(i => ({ name: i.item, amt: i.amount || '', price: i.price || '', note: '' }))
+      })
     }
-    if (g.costco?.length)  result.push({ cat:`${storeEmoji(storeMap.costco)} ${storeMap.costco.toUpperCase()}`, store:'costco',  items: g.costco.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
-    if (g.walmart?.length) result.push({ cat:`${storeEmoji(storeMap.walmart)} ${storeMap.walmart.toUpperCase()}`, store:'walmart', items: g.walmart.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
-    if (g.colmado?.length) result.push({ cat:`${storeEmoji(storeMap.colmado)} ${storeMap.colmado.toUpperCase()}`, store:'colmado', items: g.colmado.map(i => ({ name:i.item, amt:i.amount||'', price:i.price||'', note:'' })) })
+    if (g.store1?.length || g.costco?.length)  push(g.store1 || g.costco,  s1name, 'store1')
+    if (g.store2?.length || g.walmart?.length) push(g.store2 || g.walmart, s2name, 'store2')
+    if (g.store3?.length || g.colmado?.length) push(g.store3 || g.colmado, s3name, 'store3')
     return result.length ? result : GROCERY
   }, [data.generatedPlan])
 
