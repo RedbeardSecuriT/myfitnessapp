@@ -2,10 +2,55 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import { RECIPES } from '../data/recipes'
 
+// Milk keywords to detect and replace in ingredient names
+const MILK_PATTERNS = [
+  /unsweetened almond milk/gi,
+  /almond milk/gi,
+  /oat milk/gi,
+  /soy milk/gi,
+  /unsweetened soy milk/gi,
+  /whole milk/gi,
+  /2%\s*milk/gi,
+  /skim milk/gi,
+  /low-fat milk/gi,
+  /non-fat milk/gi,
+  /lactaid/gi,
+  /light coconut milk/gi,
+  /coconut milk/gi,
+  /plant-based milk/gi,
+  /dairy-free milk/gi,
+  /\bmilk\b/gi,
+]
+
+const MILK_LABELS = {
+  whole:   'whole milk',
+  '2pct':  '2% milk',
+  skim:    'skim milk',
+  oat:     'oat milk',
+  almond:  'unsweetened almond milk',
+  soy:     'unsweetened soy milk',
+  coconut: 'light coconut milk',
+  lactaid: 'Lactaid milk',
+  none:    null,
+}
+
+function applyMilkPref(text, milkPref) {
+  if (!milkPref || milkPref === 'none' || !text) return text
+  const replacement = MILK_LABELS[milkPref]
+  if (!replacement) return text
+  let result = text
+  for (const pat of MILK_PATTERNS) {
+    result = result.replace(pat, replacement)
+  }
+  return result
+}
+
 export default function Meals() {
   const { data } = useApp()
   const [catIdx, setCatIdx] = useState(0)
   const [varIdx, setVarIdx] = useState(0)
+
+  const milkPref = data.userProfile?.milkPreference || null
 
   const recipes = useMemo(() => {
     const plan = data.generatedPlan
@@ -126,7 +171,7 @@ export default function Meals() {
                     <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, color:'var(--accent)', minWidth:60, flexShrink:0 }}>
                       {ing.qty || ing.amount || '—'}
                     </div>
-                    <div style={{ fontSize:14 }}>{ing.item || ing.name}</div>
+                    <div style={{ fontSize:14 }}>{applyMilkPref(ing.item || ing.name, milkPref)}</div>
                   </div>
                 ))}
               </div>
@@ -137,7 +182,7 @@ export default function Meals() {
           {vr.steps?.map((s, i) => (
             <div key={i} style={{ display:'flex', gap:10, marginBottom:10 }}>
               <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--accent)', color:'#000', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:12, flexShrink:0 }}>{i+1}</div>
-              <div style={{ fontSize:13, lineHeight:1.6, paddingTop:2 }}>{s}</div>
+              <div style={{ fontSize:13, lineHeight:1.6, paddingTop:2 }}>{applyMilkPref(s, milkPref)}</div>
             </div>
           ))}
         </div>
