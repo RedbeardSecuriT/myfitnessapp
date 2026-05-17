@@ -59,27 +59,55 @@ export default function Today({ setScreen }) {
   const lun = gen?.meals?.lunch?.[0]
 
   const isWorkoutDay = !info.isRestDay
-  const mt = getMealTimes(data.userProfile)
+  const mt = getMealTimes(data.userProfile, info.dow)
 
   const snackCard = isWorkoutDay
     ? { time: mt.preWorkoutTime, icon:'⚠️', name:'Banana + Peanut Butter', macro:`PRE-WORKOUT · 60 min before ${data.userProfile?.workoutTime || 'your workout'} · ~240 kcal`, color:'var(--red)' }
     : { time: mt.restSnackTime,  icon:'🍎', name:gen?.meals?.snacks?.[0]?.name||'Greek Yogurt + Banana', macro:gen?.meals?.snacks?.[0]?.macros||'Snack · ~200 kcal', color:'var(--amber)' }
 
+  // Weekend warm breakfast: index 0 = Saturday, index 1 = Sunday
+  const satBf  = gen?.meals?.breakfast?.[0]
+  const sunBf  = gen?.meals?.breakfast?.[1]
+  const isSat  = info.dow === 5
+  const isSun  = info.dow === 6
+
+  const breakfastCard = (() => {
+    // Saturday — warm breakfast
+    if (isSat) return {
+      time: openFmt, icon:'🍳',
+      name:  satBf?.name  || 'Warm Breakfast',
+      macro: satBf?.macros || 'Weekend warm breakfast · ~400 kcal',
+      color: 'var(--amber)',
+    }
+    // Sunday — rest day warm breakfast
+    if (isSun) return {
+      time: openFmt, icon:'🍳',
+      name:  sunBf?.name  || satBf?.name || 'Rest Day Breakfast',
+      macro: sunBf?.macros || satBf?.macros || 'Rest day · ~400 kcal',
+      color: 'var(--purple)',
+    }
+    // Mon–Fri — overnight oats
+    const oats = gen?.meals?.oats
+    let oatName = OAT_NAMES[dayOatIdx] + ' Oats'
+    if (oats) {
+      if (Array.isArray(oats) && oats[0]?.day) {
+        const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
+        const todayOat = oats.find(o => o.day === dayNames[info.dow])
+        oatName = todayOat?.name || bf?.name || 'Overnight Oats'
+      } else {
+        oatName = bf?.name || (oats[info.dow]?.name || oatName)
+      }
+    }
+    return {
+      time: openFmt, icon:'🥣',
+      name:  oatName,
+      macro: bf?.macros || 'Break-fast · ~400 kcal',
+      color: 'var(--accent)',
+    }
+  })()
+
   const cards = [
-    { time: openFmt,      icon:'🥣', name: (() => {
-        const oats = gen?.meals?.oats
-        if (!oats) return info.dow <= 4 ? OAT_NAMES[dayOatIdx]+' Oats' : 'No oat jar today'
-        // oats can be array of {day, name} or legacy flat array
-        if (Array.isArray(oats) && oats[0]?.day) {
-          const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
-          const todayOat = oats.find(o => o.day === dayNames[info.dow])
-          return info.dow <= 4
-            ? (todayOat?.name || bf?.name || 'Overnight Oats')
-            : (info.isRestDay ? 'Rest day — no oat jar' : 'No oat jar today — enjoy a hot breakfast')
-        }
-        // legacy: just use bf.name or first oat
-        return bf?.name || (info.dow <= 4 ? (oats[info.dow]?.name || OAT_NAMES[dayOatIdx]+' Oats') : 'No oat jar today')
-      })(), macro: bf?.macros||'Break-fast · ~400 kcal', color:'var(--accent)' },
+    breakfastCard,
     { time: mt.lunchTime, icon:'🍛', name: lun?.name||'Chicken + Rice Bowl', macro: lun?.macros||'Main meal · ~500 kcal', color:'var(--blue)' },
     snackCard,
   ]

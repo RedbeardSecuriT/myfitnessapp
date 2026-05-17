@@ -3,6 +3,17 @@ import { useApp } from '../context/AppContext'
 import { supabase, BACKEND_URL } from '../lib/supabase'
 import WeightLogger from '../components/WeightLogger'
 
+const WORKOUT_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat']
+const WORKOUT_TIME_OPTIONS = [
+  'Early morning (5–7am)',
+  'Morning (7–9am)',
+  'Midday (11am–1pm)',
+  'Early afternoon (2–4pm)',
+  'Late afternoon (4–6pm)',
+  'Evening (6–8pm)',
+  'Night (8–10pm)',
+]
+
 const STRUCTURE_OPTIONS = [
   'Cardio first, then weights',
   'Weights first, then cardio',
@@ -31,6 +42,7 @@ export default function Profile({ setScreen }) {
   const [editStructure, setEditStructure] = useState(false)
   const [editFitness,   setEditFitness]   = useState(false)
   const [editNotes,     setEditNotes]     = useState(false)
+  const [editSchedule,  setEditSchedule]  = useState(false)
   const [saving,        setSaving]        = useState(false)
   const [saveMsg,       setSaveMsg]       = useState('')
 
@@ -49,6 +61,7 @@ export default function Profile({ setScreen }) {
   const [fitnessLevel, setFitnessLevel] = useState(profile?.fitnessLevel || 'Some experience (< 1 year)')
   const [trainingDays, setTrainingDays] = useState(profile?.trainingDays || '5 days')
   const [planNotes,    setPlanNotes]    = useState(profile?.planNotes || '')
+  const [timeByDay,    setTimeByDay]    = useState(profile?.workoutTimeByDay || {})
 
   // ── Completion audit ────────────────────────────────────────────────────────
   const completionItems = [
@@ -85,6 +98,11 @@ export default function Profile({ setScreen }) {
   const saveFitness = async () => {
     await persistProfile({ fitnessLevel, trainingDays })
     setEditFitness(false)
+  }
+
+  const saveSchedule = async () => {
+    await persistProfile({ workoutTimeByDay: timeByDay })
+    setEditSchedule(false)
   }
 
   const saveNotes = async () => {
@@ -284,6 +302,59 @@ export default function Profile({ setScreen }) {
               <button onClick={saveFitness} disabled={saving}
                 style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%' }}>
                 {saving ? 'Saving...' : '💾 Save fitness level'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Per-day workout schedule ── */}
+        <div style={{ borderTop:'1px solid var(--border)', paddingTop:12, marginBottom:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }}
+            onClick={() => setEditSchedule(v => !v)}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600 }}>
+                ⬜ 🕐 Per-day workout times
+              </div>
+              <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
+                {Object.keys(timeByDay).filter(d => timeByDay[d]).length > 0
+                  ? Object.entries(timeByDay).filter(([,v]) => v).map(([d,v]) => `${d}: ${v.split('(')[0].trim()}`).join(' · ')
+                  : `Default: ${profile?.workoutTime || 'Not set'} · Override per day here`}
+              </div>
+            </div>
+            <span style={{ color:'var(--muted)', fontSize:18, flexShrink:0, marginLeft:8 }}>{editSchedule ? '▲' : '▼'}</span>
+          </div>
+
+          {editSchedule && (
+            <div style={{ marginTop:12 }}>
+              <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10, lineHeight:1.5 }}>
+                Default: <strong style={{ color:'var(--text)' }}>{profile?.workoutTime || 'Not set'}</strong> — override any day below. Leave blank to use default.
+              </div>
+              {WORKOUT_DAYS.map(day => (
+                <div key={day} style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'var(--muted)', marginBottom:6 }}>{day}</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                    <button onClick={() => setTimeByDay(t => ({ ...t, [day]: null }))}
+                      style={{ padding:'6px 12px', borderRadius:16, fontSize:12, cursor:'pointer',
+                        border:`1px solid ${!timeByDay[day] ? 'var(--accent)' : 'var(--border)'}`,
+                        background: !timeByDay[day] ? 'rgba(0,200,150,.1)' : 'var(--faint)',
+                        color: !timeByDay[day] ? 'var(--accent)' : 'var(--muted)' }}>
+                      Use default
+                    </button>
+                    {WORKOUT_TIME_OPTIONS.map(opt => (
+                      <button key={opt} onClick={() => setTimeByDay(t => ({ ...t, [day]: opt }))}
+                        style={{ padding:'6px 12px', borderRadius:16, fontSize:12, cursor:'pointer',
+                          border:`1px solid ${timeByDay[day] === opt ? 'var(--accent)' : 'var(--border)'}`,
+                          background: timeByDay[day] === opt ? 'rgba(0,200,150,.1)' : 'var(--faint)',
+                          color: timeByDay[day] === opt ? 'var(--accent)' : 'var(--muted)' }}>
+                        {opt.split('(')[0].trim()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button onClick={saveSchedule} disabled={saving}
+                style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%', marginTop:4 }}>
+                {saving ? 'Saving...' : '💾 Save workout schedule'}
               </button>
             </div>
           )}

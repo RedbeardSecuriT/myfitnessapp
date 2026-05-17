@@ -29,8 +29,12 @@ function parseIfStart(ifStart) {
   return h
 }
 
-export function getMealTimes(userProfile) {
-  const workoutStr  = userProfile?.workoutTime || 'Evening (6–8pm)'
+export function getMealTimes(userProfile, dow = null) {
+  // Per-day override: workoutTimeByDay = { Mon: 'Morning (7-9am)', Sat: 'Morning (7-9am)', ... }
+  const DAY_KEYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const byDay    = userProfile?.workoutTimeByDay || {}
+  const dayKey   = dow !== null ? DAY_KEYS[dow] : null
+  const workoutStr  = (dayKey && byDay[dayKey]) || userProfile?.workoutTime || 'Evening (6–8pm)'
   const workoutHour = WORKOUT_HOUR_MAP[workoutStr] ?? 18
   const openHour    = parseIfStart(userProfile?.ifStart)
   const isIF        = (userProfile?.eatingSchedule || '').toLowerCase().includes('intermittent')
