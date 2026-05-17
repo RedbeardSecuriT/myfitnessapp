@@ -14,6 +14,18 @@ const WORKOUT_TIME_OPTIONS = [
   'Night (8–10pm)',
 ]
 
+const MILK_OPTIONS = [
+  { value:'whole',   label:'🥛 Whole milk',          sub:'Full fat dairy' },
+  { value:'2pct',    label:'🥛 2% milk',             sub:'Reduced fat dairy' },
+  { value:'skim',    label:'🥛 Skim milk',            sub:'Fat-free dairy' },
+  { value:'oat',     label:'🌾 Oat milk',             sub:'No dairy' },
+  { value:'almond',  label:'🌰 Almond milk',          sub:'No dairy, low cal' },
+  { value:'soy',     label:'🫘 Soy milk',             sub:'High protein, no dairy' },
+  { value:'coconut', label:'🥥 Coconut milk',         sub:'Dairy-free, richer' },
+  { value:'lactaid', label:'🥛 Lactaid / lactose-free', sub:'Dairy, no lactose' },
+  { value:'none',    label:'❌ No milk / skip',       sub:'Prefer to leave it out' },
+]
+
 const STRUCTURE_OPTIONS = [
   'Cardio first, then weights',
   'Weights first, then cardio',
@@ -42,6 +54,7 @@ export default function Profile({ setScreen }) {
   const [editStructure, setEditStructure] = useState(false)
   const [editFitness,   setEditFitness]   = useState(false)
   const [editNotes,     setEditNotes]     = useState(false)
+  const [editMilk,      setEditMilk]      = useState(false)
   const [editSchedule,  setEditSchedule]  = useState(false)
   const [saving,        setSaving]        = useState(false)
   const [saveMsg,       setSaveMsg]       = useState('')
@@ -61,6 +74,7 @@ export default function Profile({ setScreen }) {
   const [fitnessLevel, setFitnessLevel] = useState(profile?.fitnessLevel || 'Some experience (< 1 year)')
   const [trainingDays, setTrainingDays] = useState(profile?.trainingDays || '5 days')
   const [planNotes,    setPlanNotes]    = useState(profile?.planNotes || '')
+  const [milkPref,     setMilkPref]     = useState(profile?.milkPreference || '')
   const [timeByDay,    setTimeByDay]    = useState(profile?.workoutTimeByDay || {})
 
   // ── Completion audit ────────────────────────────────────────────────────────
@@ -103,6 +117,11 @@ export default function Profile({ setScreen }) {
   const saveSchedule = async () => {
     await persistProfile({ workoutTimeByDay: timeByDay })
     setEditSchedule(false)
+  }
+
+  const saveMilk = async () => {
+    await persistProfile({ milkPreference: milkPref })
+    setEditMilk(false)
   }
 
   const saveNotes = async () => {
@@ -355,6 +374,48 @@ export default function Profile({ setScreen }) {
               <button onClick={saveSchedule} disabled={saving}
                 style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%', marginTop:4 }}>
                 {saving ? 'Saving...' : '💾 Save workout schedule'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Milk preference ── */}
+        <div style={{ borderTop:'1px solid var(--border)', paddingTop:12, marginBottom:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }}
+            onClick={() => setEditMilk(v => !v)}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600 }}>
+                {milkPref ? '✅' : '⬜'} 🥛 Milk / dairy preference
+              </div>
+              <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
+                {milkPref
+                  ? MILK_OPTIONS.find(m => m.value === milkPref)?.label || milkPref
+                  : 'Used in oats, smoothies, and recipes — affects every meal'}
+              </div>
+            </div>
+            <span style={{ color:'var(--muted)', fontSize:18, flexShrink:0, marginLeft:8 }}>{editMilk ? '▲' : '▼'}</span>
+          </div>
+
+          {editMilk && (
+            <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:8 }}>
+              {MILK_OPTIONS.map(opt => (
+                <button key={opt.value} onClick={() => setMilkPref(opt.value)}
+                  style={{
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'12px 14px', borderRadius:12, cursor:'pointer', textAlign:'left',
+                    border:`2px solid ${milkPref === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                    background: milkPref === opt.value ? 'rgba(0,200,150,.1)' : 'var(--faint)',
+                  }}>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:600, color: milkPref === opt.value ? 'var(--accent)' : 'var(--text)' }}>{opt.label}</div>
+                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{opt.sub}</div>
+                  </div>
+                  {milkPref === opt.value && <span style={{ fontSize:18 }}>✅</span>}
+                </button>
+              ))}
+              <button onClick={saveMilk} disabled={saving || !milkPref}
+                style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%', marginTop:4 }}>
+                {saving ? 'Saving...' : '💾 Save milk preference'}
               </button>
             </div>
           )}

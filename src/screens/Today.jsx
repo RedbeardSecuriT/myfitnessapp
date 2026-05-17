@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { getProgramInfo, getIFWindow } from '../lib/program'
 import { getMealTimes } from '../lib/mealTimes'
+import { supabase, BACKEND_URL } from '../lib/supabase'
 import WaterTracker from '../components/WaterTracker'
 import WeightLogger from '../components/WeightLogger'
 import StreakCard from '../components/StreakCard'
@@ -10,8 +11,12 @@ import Milestones from '../components/Milestones'
 const OAT_NAMES = ['🍌 Banana PB','🥭 Mango Coconut','🍫 Choco PB','🍓 Strawberry Vanilla','🥜 PB Banana Honey','🫐 Blueberry Almond']
 
 export default function Today({ setScreen }) {
-  const { user, data, syncing } = useApp()
+  const { user, data, syncing, updatePlan } = useApp()
   const [now, setNow] = useState(new Date())
+  const [genLoading, setGenLoading] = useState(false)
+  const [genStatus,  setGenStatus]  = useState('')
+  const [genDone,    setGenDone]    = useState(false)
+  const [elapsed,    setElapsed]    = useState(0)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
@@ -123,6 +128,55 @@ export default function Today({ setScreen }) {
     return done >= 4 ? 'done' : done > 0 ? 'partial' : 'empty'
   })
 
+  const handleGenerate = async () => {
+    if (!user?.id || genLoading) return
+    setGenLoading(true)
+    setGenDone(false)
+    setElapsed(0)
+
+    const phases = [
+      'Pulling your check-in data...',
+      'Designing your meal plan...',
+      'Building 5 oat variants...',
+      'Adjusting workout intensity...',
+      'Finalizing your week...',
+    ]
+    let pi = 0
+    setGenStatus(phases[0])
+    const phaseIv = setInterval(() => { pi = (pi+1) % phases.length; setGenStatus(phases[pi]) }, 12000)
+    const startTs = Date.now()
+    const elapsedIv = setInterval(() => setElapsed(Math.floor((Date.now()-startTs)/1000)), 1000)
+
+    try {
+      const res    = await fetch(`${BACKEND_URL}/generate-week`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, weekNum: info.weekNum }),
+      })
+      const result = await res.json()
+      clearInterval(phaseIv); clearInterval(elapsedIv)
+      if (!result.success) throw new Error(result.error || 'Generation failed')
+
+      // Merge into context so Meals + Grocery update immediately
+      const cur     = data.generatedPlan || {}
+      const updated = {
+        ...cur,
+        meals: { ...cur.meals, oats: result.plan?.meals?.oats || cur.meals?.oats, lunch: result.plan?.meals?.lunch || cur.meals?.lunch, dinner: result.plan?.meals?.dinner || cur.meals?.dinner, snacks: result.plan?.meals?.snacks || cur.meals?.snacks },
+        workoutNotes:     result.plan?.workoutNotes,
+        groceryAdditions: result.plan?.groceryAdditions,
+        weeklyMessage:    result.plan?.personalMessage,
+        _generatedWeek:   result.weekNum,
+        _generatedAt:     result.generatedAt,
+      }
+      updatePlan(data.userProfile, updated)
+      setGenDone(true)
+      setGenStatus(`✅ Week ${result.weekNum} ready — check Meals tab!`)
+    } catch(e) {
+      clearInterval(phaseIv); clearInterval(elapsedIv)
+      setGenStatus('❌ ' + e.message)
+    }
+    setGenLoading(false)
+  }
+
   return (
     <div className="screen">
       {syncing && <div className="sync-indicator">syncing...</div>}
@@ -166,15 +220,47 @@ export default function Today({ setScreen }) {
             {dayBars.map((s,i) => <div key={i} style={{ flex:1, height:6, borderRadius:3, background: s==='done'?'var(--accent)':s==='partial'?'var(--amber)':'var(--faint)' }} />)}
           </div>
           <div className="syne fw7" style={{ fontSize:13, color:'var(--accent)', marginBottom:8 }}>🥣 THIS WEEK'S OAT JARS — PREP SUNDAY</div>
-          {['Mon','Tue','Wed','Thu','Fri'].map((d,i) => (
-            <div key={d} style={{ display:'flex', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)', fontSize:13 }}>
-              <span style={{ color:'var(--muted)', width:34 }}>{d}</span>
-              <span style={{ textDecoration:'line-through', color:'var(--muted)' }}>{OAT_NAMES[i]}</span>
+          {(() => {
+            const oats = gen?.meals?.oats
+            const labels = ['Mon','Tue','Wed','Thu','Fri']
+            return labels.map((d,i) => {
+              const name = (oats && oats[i]?.name) ? oats[i].name : OAT_NAMES[i]
+              return (
+                <div key={d} style={{ display:'flex', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)', fontSize:13 }}>
+                  <span style={{ color:'var(--muted)', width:34 }}>{d}</span>
+                  <span style={{ color:'var(--text)' }}>{name}</span>
+                </div>
+              )
+            })
+          })()}
+
+          {genLoading && (
+            <div style={{ marginTop:12, padding:'10px 14px', background:'var(--faint)', borderRadius:10, display:'flex', alignItems:'center', gap:10 }}>
+              <div className="ob-spinner" style={{ width:18, height:18, minWidth:18, borderWidth:2 }} />
+              <div>
+                <div style={{ fontSize:12, color:'var(--muted)' }}>{genStatus}</div>
+                <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{elapsed}s elapsed — usually 45–90 seconds</div>
+              </div>
             </div>
-          ))}
-          <button onClick={() => {}} style={{ width:'100%', marginTop:14, background:'var(--accent)', color:'#000', border:'none', borderRadius:12, padding:14, fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:700, cursor:'pointer' }}>
-            🤖 Generate next week's AI plan
+          )}
+          {!genLoading && genDone && (
+            <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(0,200,150,.1)', border:'1px solid var(--accent)', borderRadius:10, fontSize:13, color:'var(--accent)' }}>
+              {genStatus}
+            </div>
+          )}
+          {!genLoading && !genDone && genStatus.startsWith('❌') && (
+            <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(239,68,68,.1)', border:'1px solid var(--red)', borderRadius:10, fontSize:13, color:'var(--red)' }}>
+              {genStatus}
+            </div>
+          )}
+
+          <button onClick={handleGenerate} disabled={genLoading}
+            style={{ width:'100%', marginTop:14, background: genLoading ? 'var(--faint)' : 'var(--accent)', color: genLoading ? 'var(--muted)' : '#000', border:'none', borderRadius:12, padding:14, fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:700, cursor: genLoading ? 'not-allowed' : 'pointer' }}>
+            {genLoading ? `⏳ Generating... (${elapsed}s)` : genDone ? '🔄 Regenerate plan' : '🤖 Generate next week\'s AI plan'}
           </button>
+          <div style={{ fontSize:11, color:'var(--muted)', textAlign:'center', marginTop:6 }}>
+            Typically 45–90 seconds · Updates Meals + Grocery tabs
+          </div>
         </div>
       ) : (
         <div className="card" style={{ background:'linear-gradient(135deg,#0d2a1a,#0d1a2a)', borderColor:'rgba(0,200,150,.2)' }}>
