@@ -171,21 +171,58 @@ function AdditionalTab({ user }) {
   )
 }
 
+// Reorder exercises according to user's workoutStructure preference.
+// Cardio = treadmill, bike, walk, run, cycling, or emoji prefix 🏃🚴🔄🔵
+function applyWorkoutStructure(exercises, structure) {
+  if (!structure || structure === 'Whatever the plan says — I\'m flexible' || structure === 'Circuit / mixed throughout') {
+    return exercises
+  }
+  const isCardio = e => {
+    const n = e.name.toLowerCase()
+    return e.name.startsWith('🏃') || e.name.startsWith('🚴') || e.name.startsWith('🔄') || e.name.startsWith('🔵') ||
+           n.includes('treadmill') || n.includes('bike') || n.includes('cycling') || n.includes('walk') || n.includes('run')
+  }
+  const isHeader   = e => e.name.startsWith('—')
+  const cardio     = exercises.filter(e => isCardio(e) && !isHeader(e))
+  const strength   = exercises.filter(e => !isCardio(e))
+
+  if (structure.startsWith('Weights first')) {
+    // Strength first, then cardio at the end
+    return [...strength, ...cardio]
+  }
+  // Default and 'Cardio first': cardio comes first — but keep headers in place
+  // Insert cardio after any leading header, then strength
+  const firstHeader = strength.findIndex(e => isHeader(e))
+  if (firstHeader > 0) {
+    return [...strength.slice(0, firstHeader), ...cardio, ...strength.slice(firstHeader)]
+  }
+  return [...cardio, ...strength]
+}
+
 export default function Workouts() {
   const { data, updateWorkout, updateProgWeight, user } = useApp()
   const info = getProgramInfo(new Date(), data.userProfile)
 
+  const workoutStructure = data.userProfile?.workoutStructure || 'Cardio first, then weights'
+
   const workouts = useMemo(() => {
     const plan = data.generatedPlan
-    if (!plan?.workouts?.length || Object.keys(plan).length === 0) return WORKOUTS
-    return plan.workouts.map((w, i) => ({
-      name:      w.name || `Workout ${i + 1}`,
-      subtitle:  w.subtitle || '',
-      color:     WORKOUTS[i]?.color || 'var(--accent)',
-      day:       WORKOUTS[i]?.day || '',
-      exercises: (w.exercises || []).map(e => ({ name:e.name, sets:e.sets||'', note:e.note||'' })),
+    const raw  = (!plan?.workouts?.length || Object.keys(plan).length === 0)
+      ? WORKOUTS
+      : plan.workouts.map((w, i) => ({
+          name:      w.name || `Workout ${i + 1}`,
+          subtitle:  w.subtitle || '',
+          color:     WORKOUTS[i]?.color || 'var(--accent)',
+          day:       WORKOUTS[i]?.day || '',
+          exercises: (w.exercises || []).map(e => ({ name:e.name, sets:e.sets||'', note:e.note||'' })),
+        }))
+
+    // Apply user's workout structure preference to every day's exercise order
+    return raw.map(w => ({
+      ...w,
+      exercises: applyWorkoutStructure(w.exercises, workoutStructure),
     }))
-  }, [data.generatedPlan])
+  }, [data.generatedPlan, workoutStructure])
 
   const [activeTab, setActiveTab] = useState(info.dow !== 6 ? Math.min(info.dow, workouts.length - 1) : 0)
   const [mainTab, setMainTab]     = useState('workout')  // 'workout' | 'additional'
@@ -268,6 +305,11 @@ export default function Workouts() {
               <div className="badge" style={{ background: isGym?'rgba(0,200,150,.12)':'rgba(59,130,246,.12)', color: isGym?'var(--accent)':'var(--blue)' }}>{locBadge}</div>
             </div>
             <div style={{ fontSize:12, color:'var(--muted)', marginTop:4 }}>{w.subtitle}</div>
+            {workoutStructure && !workoutStructure.startsWith('Whatever') && (
+              <div style={{ marginTop:6, fontSize:11, color:'var(--purple)', fontWeight:600 }}>
+                {workoutStructure.startsWith('Cardio first') ? '🏃→💪 ' : workoutStructure.startsWith('Weights first') ? '💪→🏃 ' : '🔄 '}{workoutStructure}
+              </div>
+            )}
             {total > 0 && (
               <>
                 <div className="prog-wrap" style={{ marginTop:10 }}>
