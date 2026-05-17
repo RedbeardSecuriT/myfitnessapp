@@ -30,6 +30,7 @@ export default function Profile({ setScreen }) {
   const [editStores,    setEditStores]    = useState(false)
   const [editStructure, setEditStructure] = useState(false)
   const [editFitness,   setEditFitness]   = useState(false)
+  const [editNotes,     setEditNotes]     = useState(false)
   const [saving,        setSaving]        = useState(false)
   const [saveMsg,       setSaveMsg]       = useState('')
 
@@ -47,12 +48,14 @@ export default function Profile({ setScreen }) {
   const [structure, setStructure] = useState(profile?.workoutStructure || "Whatever the plan says — I'm flexible")
   const [fitnessLevel, setFitnessLevel] = useState(profile?.fitnessLevel || 'Some experience (< 1 year)')
   const [trainingDays, setTrainingDays] = useState(profile?.trainingDays || '5 days')
+  const [planNotes,    setPlanNotes]    = useState(profile?.planNotes || '')
 
   // ── Completion audit ────────────────────────────────────────────────────────
   const completionItems = [
     { key:'stores',    label:'Preferred grocery stores', done: stores.filter(Boolean).length >= 1, action: () => setEditStores(v => !v) },
     { key:'structure', label:'Workout structure',        done: profile?.workoutStructure && !profile.workoutStructure.includes('flexible') && !profile.workoutStructure.includes('Flexible'), action: () => setEditStructure(v => !v) },
     { key:'fitness',   label:'Fitness level',           done: profile?.fitnessLevel && profile.fitnessLevel !== 'Some experience (< 1 year)', action: () => setEditFitness(v => !v) },
+    { key:'notes',     label:'Personal preferences',    done: !!(profile?.planNotes && profile.planNotes.trim().length > 10), action: () => setEditNotes(v => !v) },
   ]
   const completedCount = completionItems.filter(i => i.done).length
   const completionPct  = Math.round((completedCount / completionItems.length) * 100)
@@ -82,6 +85,11 @@ export default function Profile({ setScreen }) {
   const saveFitness = async () => {
     await persistProfile({ fitnessLevel, trainingDays })
     setEditFitness(false)
+  }
+
+  const saveNotes = async () => {
+    await persistProfile({ planNotes })
+    setEditNotes(false)
   }
 
   // ── Full plan regeneration (uses updated profile) ───────────────────────────
@@ -276,6 +284,51 @@ export default function Profile({ setScreen }) {
               <button onClick={saveFitness} disabled={saving}
                 style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%' }}>
                 {saving ? 'Saving...' : '💾 Save fitness level'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Plan notes ── */}
+        <div style={{ borderTop:'1px solid var(--border)', paddingTop:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }}
+            onClick={() => setEditNotes(v => !v)}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600 }}>
+                {completionItems[3].done ? '✅' : '⬜'} 📝 Personal preferences & requests
+              </div>
+              <div style={{ fontSize:12, color:'var(--muted)', marginTop:2, lineHeight:1.5 }}>
+                {profile?.planNotes && profile.planNotes.trim()
+                  ? profile.planNotes.length > 80
+                    ? profile.planNotes.slice(0, 80) + '...'
+                    : profile.planNotes
+                  : 'Favorite foods, dislikes, sports, schedule constraints — Claude uses every word'}
+              </div>
+            </div>
+            <span style={{ color:'var(--muted)', fontSize:18, flexShrink:0, marginLeft:8 }}>{editNotes ? '▲' : '▼'}</span>
+          </div>
+
+          {editNotes && (
+            <div style={{ marginTop:12 }}>
+              <textarea
+                value={planNotes}
+                onChange={e => setPlanNotes(e.target.value)}
+                rows={6}
+                placeholder={'Tell Claude anything that should shape your plan:\n• "I love chicken, rice, and eggs. Hate mushrooms."\n• "I do BJJ on Tuesday and Thursday nights"\n• "I work night shifts 10pm–6am"\n• "I want overnight oats every weekday morning"\n• "Complete beginner — never lifted before"'}
+                style={{
+                  width:'100%', background:'var(--bg)', border:'1px solid var(--border)',
+                  borderRadius:12, padding:'12px 14px', color:'var(--text)',
+                  fontFamily:"'DM Sans',sans-serif", fontSize:13, lineHeight:1.7,
+                  resize:'none', outline:'none', marginBottom:10,
+                  borderColor: planNotes.trim() ? 'rgba(0,200,150,.4)' : 'var(--border)',
+                }}
+              />
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+                These notes are included every time Claude generates or refreshes your plan. Hit "Regenerate full plan" below to apply them immediately.
+              </div>
+              <button onClick={saveNotes} disabled={saving}
+                style={{ background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'10px 16px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, cursor:'pointer', width:'100%' }}>
+                {saving ? 'Saving...' : '💾 Save preferences'}
               </button>
             </div>
           )}
