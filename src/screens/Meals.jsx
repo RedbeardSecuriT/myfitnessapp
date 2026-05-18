@@ -14,14 +14,12 @@ const MILK_LABELS = {
   none:    null,
 }
 
-// Single combined regex — ordered specific→generic so each span is matched once.
-// This prevents the double-replacement bug ("oat milk" → "oat oat milk").
-const MILK_COMBINED = /unsweetened almond milk|almond milk|oat milk|unsweetened soy milk|soy milk|whole milk|2%\s*milk|low-fat milk|non-fat milk|skim milk|lactaid milk|lactaid|light coconut milk|coconut milk|plant.based milk|dairy.free milk|\bmilk\b/gi
-
 function applyMilkPref(text, milkPref) {
   if (!milkPref || milkPref === 'none' || !text) return text
   const replacement = MILK_LABELS[milkPref]
   if (!replacement) return text
+  // Regex created inside function — avoids Vite TDZ bug with module-level /g regexes
+  const MILK_COMBINED = /unsweetened almond milk|almond milk|oat milk|unsweetened soy milk|soy milk|whole milk|2%\s*milk|low-fat milk|non-fat milk|skim milk|lactaid milk|lactaid|light coconut milk|coconut milk|plant.based milk|dairy.free milk|\bmilk\b/gi
   return text.replace(MILK_COMBINED, replacement)
 }
 
