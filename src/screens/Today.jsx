@@ -77,15 +77,15 @@ export default function Today({ setScreen }) {
   const restSnack = snacks.find(s => !isPreWorkoutSnack(s)) || snacks[1] || snacks[0]
 
   // Sunday is always rest — never show a pre-workout snack
+  // Weekend / rest day flags — must be declared BEFORE snackCard and breakfastCard
+  const isSat  = info.dow === 5
+  const isSun  = info.dow === 6
+  const satBf  = gen?.meals?.breakfast?.[0]
+  const sunBf  = gen?.meals?.breakfast?.[1]
+
   const snackCard = (isWorkoutDay && !isSun)
     ? { time: mt.preWorkoutTime, icon:'⚠️', name:'Banana + Peanut Butter', macro:`PRE-WORKOUT · 60 min before ${data.userProfile?.workoutTime || 'your workout'} · ~240 kcal`, color:'var(--red)' }
     : { time: mt.restSnackTime,  icon:'🍎', name: restSnack?.name || 'Greek Yogurt + Banana', macro: restSnack?.macros || 'Rest day snack · ~200 kcal', color:'var(--amber)' }
-
-  // Weekend warm breakfast: index 0 = Saturday, index 1 = Sunday
-  const satBf  = gen?.meals?.breakfast?.[0]
-  const sunBf  = gen?.meals?.breakfast?.[1]
-  const isSat  = info.dow === 5
-  const isSun  = info.dow === 6
 
   const breakfastCard = (() => {
     // Saturday — warm breakfast
