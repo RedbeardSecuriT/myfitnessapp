@@ -51,6 +51,12 @@ export default function MealTracker() {
   const [filter,     setFilter]     = useState('all')
   const [saving,     setSaving]     = useState(false)
 
+  // Label scanner state
+  const [scanState,   setScanState]   = useState('idle') // idle | scanning | confirm | error
+  const [scanResult,  setScanResult]  = useState(null)
+  const [scanError,   setScanError]   = useState('')
+  const [scanServings, setScanServings] = useState(1)
+
   // AI feedback state
   const [feedback,      setFeedback]      = useState(null)
   const [analyzing,     setAnalyzing]     = useState(false)
@@ -105,6 +111,64 @@ export default function MealTracker() {
   }
 
   const timeLabel = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true })
+
+  // ── Label Scanner ──────────────────────────────────────────────────────────
+  const handleScanFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // reset so same file can be picked again
+
+    setScanState('scanning')
+    setScanError('')
+    setScanResult(null)
+    setScanServings(1)
+
+    try {
+      // Convert to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = () => resolve(reader.result.split(',')[1])
+        reader.onerror = () => reject(new Error('Failed to read image'))
+        reader.readAsDataURL(file)
+      })
+
+      const mimeType = file.type || 'image/jpeg'
+      const res = await fetch(`${BACKEND_URL}/scan-label`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Scan failed')
+
+      setScanResult(data.result)
+      setScanState('confirm')
+    } catch (err) {
+      setScanError(err.message)
+      setScanState('error')
+    }
+  }
+
+  const confirmScan = () => {
+    if (!scanResult) return
+    const mult = parseFloat(scanServings) || 1
+    saveEntry({
+      name:  scanResult.name,
+      emoji: scanResult.emoji || '📦',
+      cal:   Math.round((scanResult.calories || 0) * mult),
+      cat:   scanResult.category || 'food',
+      note:  [
+        scanResult.note,
+        `${scanResult.protein || 0}g protein · ${scanResult.carbs || 0}g carbs · ${scanResult.fat || 0}g fat`,
+        scanResult.servingSize ? `Serving: ${scanResult.servingSize}${mult !== 1 ? ` × ${mult}` : ''}` : null,
+      ].filter(Boolean).join(' · '),
+    })
+    setFeedback(null)
+    setScanState('idle')
+    setScanResult(null)
+  }
+
+  const dismissScan = () => { setScanState('idle'); setScanResult(null); setScanError('') }
 
   // ── AI Feedback ────────────────────────────────────────────────────────────
   const analyzeDay = async () => {
@@ -210,6 +274,130 @@ export default function MealTracker() {
           </button>
         ))}
       </div>
+
+      {/* ── Label Scanner ──────────────────────────────────────────────────── */}
+      <input
+        id="label-scan-input"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display:'none' }}
+        onChange={handleScanFile}
+      />
+
+      {scanState === 'idle' && (
+        <button
+          onClick={() => document.getElementById('label-scan-input').click()}
+          style={{
+            width:'100%', marginBottom:12, padding:'14px 16px',
+            background:'linear-gradient(135deg, #7c3aed22, #7c3aed11)',
+            border:'1.5px solid #7c3aed66', borderRadius:14,
+            display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+            cursor:'pointer', color:'var(--text)',
+          }}>
+          <span style={{ fontSize:24 }}>📷</span>
+          <div style={{ textAlign:'left' }}>
+            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:14 }}>Scan nutrition label</div>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>Take a photo of any food or drink label</div>
+          </div>
+        </button>
+      )}
+
+      {scanState === 'scanning' && (
+        <div style={{ width:'100%', marginBottom:12, padding:'18px 16px', background:'var(--faint)', border:'1.5px solid var(--border)', borderRadius:14, display:'flex', alignItems:'center', gap:12 }}>
+          <div className="ob-spinner" style={{ width:22, height:22, minWidth:22, borderWidth:2 }} />
+          <div>
+            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:14 }}>Reading label...</div>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>Claude is extracting nutrition facts</div>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'error' && (
+        <div style={{ width:'100%', marginBottom:12, padding:'14px 16px', background:'rgba(239,68,68,.08)', border:'1.5px solid var(--red)', borderRadius:14 }}>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, color:'var(--red)', marginBottom:6 }}>⚠️ Scan failed</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>{scanError}</div>
+          <button onClick={dismissScan} style={{ fontSize:12, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Try again</button>
+        </div>
+      )}
+
+      {scanState === 'confirm' && scanResult && (
+        <div style={{ width:'100%', marginBottom:12, background:'var(--bg3)', border:'1.5px solid #7c3aed66', borderRadius:14, overflow:'hidden' }}>
+          {/* Header */}
+          <div style={{ padding:'14px 16px', background:'#7c3aed18', borderBottom:'1px solid #7c3aed33', display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:28 }}>{scanResult.emoji || '📦'}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:14, lineHeight:1.3 }}>{scanResult.name}</div>
+              {scanResult.servingSize && (
+                <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>Per {scanResult.servingSize}</div>
+              )}
+            </div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:20, color: scanResult.calories === 0 ? 'var(--accent)' : 'var(--text)' }}>
+                {Math.round((scanResult.calories || 0) * (parseFloat(scanServings)||1))}
+              </div>
+              <div style={{ fontSize:10, color:'var(--muted)' }}>kcal</div>
+            </div>
+          </div>
+
+          {/* Macros row */}
+          <div style={{ padding:'10px 16px', display:'flex', gap:16, borderBottom:'1px solid var(--border)' }}>
+            {[
+              ['Protein', scanResult.protein, 'var(--accent)'],
+              ['Carbs',   scanResult.carbs,   'var(--amber)'],
+              ['Fat',     scanResult.fat,      'var(--blue)'],
+              ...(scanResult.sugar  != null ? [['Sugar', scanResult.sugar, 'var(--red)']] : []),
+            ].map(([lbl, val, color]) => (
+              <div key={lbl} style={{ textAlign:'center', flex:1 }}>
+                <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:15, color }}>
+                  {Math.round((val || 0) * (parseFloat(scanServings)||1))}g
+                </div>
+                <div style={{ fontSize:10, color:'var(--muted)' }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Servings multiplier */}
+          {scanResult.servingsPerContainer > 1 && (
+            <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ fontSize:12, color:'var(--muted)', flex:1 }}>Servings consumed</span>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <button onClick={() => setScanServings(s => Math.max(0.5, parseFloat(s)-0.5))}
+                  style={{ width:28, height:28, borderRadius:'50%', background:'var(--faint)', border:'1px solid var(--border)', color:'var(--text)', fontSize:16, cursor:'pointer' }}>−</button>
+                <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:15, minWidth:24, textAlign:'center' }}>{scanServings}</span>
+                <button onClick={() => setScanServings(s => parseFloat(s)+0.5)}
+                  style={{ width:28, height:28, borderRadius:'50%', background:'var(--faint)', border:'1px solid var(--border)', color:'var(--text)', fontSize:16, cursor:'pointer' }}>+</button>
+              </div>
+            </div>
+          )}
+
+          {/* Note */}
+          {scanResult.note && (
+            <div style={{ padding:'8px 16px', borderBottom:'1px solid var(--border)', fontSize:12, color:'var(--muted)' }}>
+              ℹ️ {scanResult.note}
+            </div>
+          )}
+
+          {/* Confidence warning */}
+          {scanResult.confidence === 'low' && (
+            <div style={{ padding:'8px 16px', borderBottom:'1px solid var(--border)', fontSize:12, color:'var(--amber)' }}>
+              ⚠️ Low confidence — verify numbers on the actual label
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ padding:'12px 16px', display:'flex', gap:8 }}>
+            <button onClick={confirmScan}
+              style={{ flex:1, background:'var(--accent)', color:'#000', border:'none', borderRadius:10, padding:'11px', fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:14, cursor:'pointer' }}>
+              ✅ Add to log
+            </button>
+            <button onClick={dismissScan}
+              style={{ background:'var(--faint)', border:'1px solid var(--border)', color:'var(--muted)', borderRadius:10, padding:'11px 16px', cursor:'pointer', fontSize:13 }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Custom entry ───────────────────────────────────────────────────── */}
       {!showCustom ? (
