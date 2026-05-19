@@ -113,6 +113,29 @@ export default function MealTracker() {
   const timeLabel = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true })
 
   // ── Label Scanner ──────────────────────────────────────────────────────────
+  // Compress image to max 1200px / 0.82 quality before sending
+  const compressImage = (file) => new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const MAX = 1200
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+        else                { width  = Math.round(width  * MAX / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      // Always output as jpeg for smallest size
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
+      resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' })
+    }
+    img.onerror = () => reject(new Error('Could not load image'))
+    img.src = url
+  })
+
   const handleScanFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -124,20 +147,23 @@ export default function MealTracker() {
     setScanServings(1)
 
     try {
-      // Convert to base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result.split(',')[1])
-        reader.onerror = () => reject(new Error('Failed to read image'))
-        reader.readAsDataURL(file)
-      })
+      // Compress before sending — phone photos can be 5MB+ raw
+      const { base64, mimeType } = await compressImage(file)
 
-      const mimeType = file.type || 'image/jpeg'
       const res = await fetch(`${BACKEND_URL}/scan-label`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       })
+
+      // Handle non-JSON error responses (413 payload too large, 500, etc.)
+      if (!res.ok) {
+        const text = await res.text()
+        let msg = `Server error ${res.status}`
+        try { msg = JSON.parse(text).error || msg } catch {}
+        throw new Error(msg)
+      }
+
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Scan failed')
 
