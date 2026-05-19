@@ -146,31 +146,40 @@ export default function MealTracker() {
     setScanResult(null)
     setScanServings(1)
 
+    let stage = 'compressing'
     try {
-      // Compress before sending — phone photos can be 5MB+ raw
+      // Stage 1: compress
+      setScanError('Compressing image...')
       const { base64, mimeType } = await compressImage(file)
+      const kb = Math.round(base64.length * 0.75 / 1024)
 
+      // Stage 2: send
+      stage = 'sending'
+      setScanError(`Sending ${kb}kb to server...`)
       const res = await fetch(`${BACKEND_URL}/scan-label`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       })
 
-      // Handle non-JSON error responses (413 payload too large, 500, etc.)
+      // Stage 3: parse response
+      stage = 'parsing'
+      setScanError(`Got HTTP ${res.status}...`)
+
       if (!res.ok) {
         const text = await res.text()
-        let msg = `Server error ${res.status}`
-        try { msg = JSON.parse(text).error || msg } catch {}
+        let msg = `HTTP ${res.status}`
+        try { msg = JSON.parse(text).error || msg } catch { msg = text.slice(0,120) || msg }
         throw new Error(msg)
       }
 
       const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Scan failed')
+      if (!data.success) throw new Error(data.error || 'Backend returned failure')
 
       setScanResult(data.result)
       setScanState('confirm')
     } catch (err) {
-      setScanError(err.message)
+      setScanError(`[${stage}] ${err.message}`)
       setScanState('error')
     }
   }
@@ -334,7 +343,7 @@ export default function MealTracker() {
           <div className="ob-spinner" style={{ width:22, height:22, minWidth:22, borderWidth:2 }} />
           <div>
             <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:14 }}>Reading label...</div>
-            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>Claude is extracting nutrition facts</div>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{scanError || 'Claude is extracting nutrition facts'}</div>
           </div>
         </div>
       )}
@@ -342,7 +351,7 @@ export default function MealTracker() {
       {scanState === 'error' && (
         <div style={{ width:'100%', marginBottom:12, padding:'14px 16px', background:'rgba(239,68,68,.08)', border:'1.5px solid var(--red)', borderRadius:14 }}>
           <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:13, color:'var(--red)', marginBottom:6 }}>⚠️ Scan failed</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>{scanError}</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10, fontFamily:"monospace", wordBreak:'break-all' }}>{scanError}</div>
           <button onClick={dismissScan} style={{ fontSize:12, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Try again</button>
         </div>
       )}
