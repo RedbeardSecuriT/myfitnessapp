@@ -80,8 +80,19 @@ export default function Today({ setScreen }) {
   // Weekend / rest day flags — must be declared BEFORE snackCard and breakfastCard
   const isSat  = info.dow === 5
   const isSun  = info.dow === 6
-  const satBf  = gen?.meals?.breakfast?.[0]
-  const sunBf  = gen?.meals?.breakfast?.[1]
+
+  // Hard filter: tostones, bacalao, pernil, habichuelas are NEVER breakfast items.
+  // If the AI generates one anyway (stale plan), fall back to a safe default.
+  const BREAKFAST_BANNED = ['tostones', 'bacalao', 'pernil', 'lechon', 'habichuela', 'mofongo']
+  const isBadBreakfast = (meal) => {
+    if (!meal?.name) return false
+    const n = meal.name.toLowerCase()
+    return BREAKFAST_BANNED.some(b => n.includes(b))
+  }
+  const rawSatBf = gen?.meals?.breakfast?.[0]
+  const rawSunBf = gen?.meals?.breakfast?.[1]
+  const satBf = isBadBreakfast(rawSatBf) ? { name: 'Huevos Revueltos con Aguacate', macros: '~380 kcal · 22g protein' } : rawSatBf
+  const sunBf = isBadBreakfast(rawSunBf) ? { name: 'Avena Caliente con Frutas', macros: '~350 kcal · 12g protein' } : rawSunBf
 
   const snackCard = (isWorkoutDay && !isSun)
     ? { time: mt.preWorkoutTime, icon:'⚠️', name:'Banana + Peanut Butter', macro:`PRE-WORKOUT · 60 min before ${data.userProfile?.workoutTime || 'your workout'} · ~240 kcal`, color:'var(--red)' }

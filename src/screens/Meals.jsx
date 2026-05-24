@@ -59,13 +59,20 @@ export default function Meals() {
 
     const breakfastVariants = [
       ...oatVariants,
-      ...(plan.meals.breakfast || []).map(meal => {
-        const raw = meal.instructions || 'Prepare as described.'
-        let steps = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean)
-        if (steps.length <= 1) steps = raw.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 4)
-        if (!steps.length) steps = [raw]
-        return { name: meal.name || 'Breakfast', macros: meal.macros || '', ingredients: meal.ingredients || [], steps }
-      })
+      ...(plan.meals.breakfast || [])
+        .filter(meal => {
+          // Hard block: tostones and other non-breakfast foods must never appear here
+          const BANNED = ['tostones','bacalao','pernil','lechon','habichuela','mofongo']
+          const n = (meal.name || '').toLowerCase()
+          return !BANNED.some(b => n.includes(b))
+        })
+        .map(meal => {
+          const raw = meal.instructions || 'Prepare as described.'
+          let steps = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean)
+          if (steps.length <= 1) steps = raw.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 4)
+          if (!steps.length) steps = [raw]
+          return { name: meal.name || 'Breakfast', macros: meal.macros || '', ingredients: meal.ingredients || [], steps }
+        })
     ]
 
     const bfCat = breakfastVariants.length > 0 ? { emoji:'🥣', name:'Breakfast', sub:'Overnight oats by day + breakfast options', variants: breakfastVariants } : null
