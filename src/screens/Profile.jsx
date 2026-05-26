@@ -529,6 +529,66 @@ export default function Profile({ setScreen }) {
         )}
       </div>
 
+      {/* ── Supplement Protocol ─────────────────────────────────────────────── */}
+      {plan?.supplementProtocol && (
+        <>
+          <div className="section-label">💊 Supplement Protocol</div>
+          <div className="card" style={{ marginBottom:16 }}>
+            {/* Pre-workout block */}
+            {plan.supplementProtocol.preWorkout && (
+              <>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:'rgba(0,200,150,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>⏱️</div>
+                  <div>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:14 }}>Pre-Workout</div>
+                    <div style={{ fontSize:12, color:'var(--accent)', fontWeight:600 }}>{plan.supplementProtocol.preWorkout.timing}</div>
+                  </div>
+                </div>
+
+                {plan.supplementProtocol.preWorkout.items?.map((item, i) => (
+                  <div key={i} style={{ background:'var(--faint)', borderRadius:12, padding:'12px 14px', marginBottom:8 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+                      <div style={{ fontWeight:700, fontSize:13 }}>{item.name}</div>
+                      <div style={{ background:'var(--accent)', color:'#000', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700, flexShrink:0, marginLeft:8 }}>{item.dose}</div>
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.5 }}>{item.instructions}</div>
+                  </div>
+                ))}
+
+                <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(239,68,68,.07)', border:'1px solid rgba(239,68,68,.2)', borderRadius:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:'var(--red)', marginBottom:3 }}>⚠️ Hypoglycemia Safety</div>
+                  <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.5 }}>{plan.supplementProtocol.preWorkout.foodNote}</div>
+                </div>
+
+                {plan.supplementProtocol.preWorkout.mixNote && (
+                  <div style={{ marginTop:8, fontSize:12, color:'var(--muted)', lineHeight:1.5, fontStyle:'italic' }}>
+                    💡 {plan.supplementProtocol.preWorkout.mixNote}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Daily supplements */}
+            {plan.supplementProtocol.daily?.length > 0 && (
+              <>
+                <div style={{ borderTop:'1px solid var(--border)', marginTop:14, paddingTop:14 }}>
+                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:13, marginBottom:10 }}>📅 Daily Supplements</div>
+                  {plan.supplementProtocol.daily.map((s, i) => (
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingBottom:8, marginBottom:8, borderBottom: i < plan.supplementProtocol.daily.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600 }}>{s.name}</div>
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{s.timing}</div>
+                      </div>
+                      <div style={{ background:'var(--faint)', border:'1px solid var(--border)', borderRadius:8, padding:'3px 10px', fontSize:12, fontWeight:700, flexShrink:0, marginLeft:8 }}>{s.dose}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
       {/* ── Sign out ────────────────────────────────────────────────────────── */}
       <div className="section-label">⚙️ Account</div>
       <div className="card">
