@@ -17,6 +17,26 @@ export default function Today({ setScreen }) {
   const [genStatus,  setGenStatus]  = useState('')
   const [genDone,    setGenDone]    = useState(false)
   const [elapsed,    setElapsed]    = useState(0)
+  const [loggedMeals, setLoggedMeals] = useState({})
+
+  const quickLogMeal = async (card, idx) => {
+    if (!user?.id) return
+    const macroStr = card.macro || ''
+    const kcal = parseInt(macroStr.match(/(\d+)\s*kcal/)?.[1]) || 0
+    const today = new Date().toISOString().split('T')[0]
+    await supabase.from('meal_log').insert({
+      user_id:   user.id,
+      date:      today,
+      name:      card.name,
+      emoji:     card.icon,
+      calories:  kcal,
+      category:  'food',
+      note:      macroStr,
+      logged_at: new Date().toISOString(),
+    })
+    setLoggedMeals(l => ({ ...l, [idx]: true }))
+    setTimeout(() => setLoggedMeals(l => ({ ...l, [idx]: false })), 3000)
+  }
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
@@ -299,15 +319,29 @@ export default function Today({ setScreen }) {
       {/* Today's meals */}
       <div className="section-label">🍽️ Today's meals</div>
       {cards.map((c,i) => (
-        <div key={i} className="card flex-between" style={{ padding:'12px 14px' }}>
-          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <div style={{ fontSize:24 }}>{c.icon}</div>
-            <div>
-              <div style={{ fontWeight:600, fontSize:14 }}>{c.name}</div>
-              <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{c.macro}</div>
+        <div key={i} className="card" style={{ padding:'12px 14px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', gap:12, alignItems:'center', flex:1, minWidth:0 }}>
+              <div style={{ fontSize:24, flexShrink:0 }}>{c.icon}</div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:14 }}>{c.name}</div>
+                <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{c.macro}</div>
+              </div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0, marginLeft:8 }}>
+              <div className="syne fw7" style={{ fontSize:12, color:c.color, whiteSpace:'nowrap' }}>{c.time}</div>
+              <button onClick={() => quickLogMeal(c, i)}
+                style={{
+                  padding:'4px 10px', borderRadius:16, fontSize:11, fontWeight:700,
+                  fontFamily:"'Syne',sans-serif", cursor:'pointer', border:'none',
+                  background: loggedMeals[i] ? 'rgba(0,200,150,.2)' : 'rgba(0,200,150,.12)',
+                  color:      loggedMeals[i] ? 'var(--accent)' : 'var(--accent)',
+                  whiteSpace: 'nowrap',
+                }}>
+                {loggedMeals[i] ? '✅' : '+ Log'}
+              </button>
             </div>
           </div>
-          <div className="syne fw7" style={{ fontSize:12, color:c.color, whiteSpace:'nowrap', marginLeft:8 }}>{c.time}</div>
         </div>
       ))}
 

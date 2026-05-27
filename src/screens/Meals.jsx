@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
+import { supabase } from '../lib/supabase'
 import { RECIPES } from '../data/recipes'
 
 const MILK_LABELS = {
@@ -24,9 +25,44 @@ function applyMilkPref(text, milkPref) {
 }
 
 export default function Meals() {
-  const { data } = useApp()
+  const { data, user } = useApp()
   const [catIdx, setCatIdx] = useState(0)
   const [varIdx, setVarIdx] = useState(0)
+  const [logged, setLogged] = useState({}) // key: catIdx-varIdx → true/timestamp
+
+  const logMeal = async (meal, catName) => {
+    if (!user?.id || !meal) return
+    const key = `${catIdx}-${varIdx}`
+
+    // Parse macros string — "~480 kcal · 34g protein · 28g carbs · 22g fat"
+    const macroStr = meal.macros || ''
+    const kcal    = parseInt(macroStr.match(/(\d+)\s*kcal/)?.[1]) || 0
+    const protein = parseInt(macroStr.match(/(\d+)g\s*protein/)?.[1]) || 0
+    const carbs   = parseInt(macroStr.match(/(\d+)g\s*carbs/)?.[1]) || 0
+    const fat     = parseInt(macroStr.match(/(\d+)g\s*fat/)?.[1]) || 0
+
+    const today = new Date().toISOString().split('T')[0]
+    const emoji = catName === 'Breakfast' ? '🥣'
+                : catName === 'Lunch'     ? '🍛'
+                : catName === 'Dinner'    ? '🍽️'
+                : catName === 'Snacks'    ? '🍎'
+                : '🍴'
+
+    await supabase.from('meal_log').insert({
+      user_id:   user.id,
+      date:      today,
+      name:      meal.name,
+      emoji,
+      calories:  kcal,
+      category:  catName.toLowerCase(),
+      note:      `P:${protein}g C:${carbs}g F:${fat}g — logged from Recipes`,
+      logged_at: new Date().toISOString(),
+    })
+
+    setLogged(l => ({ ...l, [key]: true }))
+    // Reset logged indicator after 3 seconds
+    setTimeout(() => setLogged(l => ({ ...l, [key]: false })), 3000)
+  }
 
   const milkPref = data.userProfile?.milkPreference || null
 
@@ -138,7 +174,21 @@ export default function Meals() {
       {vr && (
         <div className="card">
           <div style={{ fontWeight:700, fontSize:16, marginBottom:6 }}>{vr.name}</div>
-          {vr.macros && <div className="badge badge-amber" style={{ marginBottom:14 }}>{vr.macros}</div>}
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+            {vr.macros && <div className="badge badge-amber">{vr.macros}</div>}
+            <button
+              onClick={() => logMeal(vr, cat?.name)}
+              style={{
+                padding:'5px 14px', borderRadius:20, fontSize:12, fontWeight:700,
+                fontFamily:"'Syne',sans-serif", cursor:'pointer', border:'none',
+                background: logged[`${catIdx}-${varIdx}`] ? 'rgba(0,200,150,.2)' : 'var(--accent)',
+                color:      logged[`${catIdx}-${varIdx}`] ? 'var(--accent)' : '#000',
+                transition:'all .2s',
+                flexShrink: 0,
+              }}>
+              {logged[`${catIdx}-${varIdx}`] ? '✅ Logged!' : '+ Log this meal'}
+            </button>
+          </div>
 
 
 
