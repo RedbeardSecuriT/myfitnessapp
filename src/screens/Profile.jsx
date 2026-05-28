@@ -568,6 +568,31 @@ export default function Profile({ setScreen }) {
               </>
             )}
 
+            {/* Post-workout block */}
+            {plan.supplementProtocol.postWorkout && (
+              <div style={{ borderTop:'1px solid var(--border)', marginTop:14, paddingTop:14 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:'rgba(59,130,246,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>💪</div>
+                  <div>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:14 }}>Post-Workout</div>
+                    <div style={{ fontSize:12, color:'var(--blue)', fontWeight:600 }}>{plan.supplementProtocol.postWorkout.timing}</div>
+                  </div>
+                </div>
+                {plan.supplementProtocol.postWorkout.items?.map((item, i) => (
+                  <div key={i} style={{ background:'var(--faint)', borderRadius:12, padding:'12px 14px', marginBottom:8 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+                      <div style={{ fontWeight:700, fontSize:13 }}>{item.name}</div>
+                      <div style={{ background:'var(--blue)', color:'#fff', borderRadius:8, padding:'2px 8px', fontSize:11, fontWeight:700, flexShrink:0, marginLeft:8 }}>{item.dose}</div>
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.5 }}>{item.instructions}</div>
+                  </div>
+                ))}
+                {plan.supplementProtocol.postWorkout.followUpNote && (
+                  <div style={{ fontSize:12, color:'var(--muted)', fontStyle:'italic', marginTop:4 }}>💡 {plan.supplementProtocol.postWorkout.followUpNote}</div>
+                )}
+              </div>
+            )}
+
             {/* Daily supplements */}
             {plan.supplementProtocol.daily?.length > 0 && (
               <>
@@ -584,6 +609,44 @@ export default function Profile({ setScreen }) {
                   ))}
                 </div>
               </>
+            )}
+
+            {/* Rest day note */}
+            {plan.supplementProtocol.restDay && (
+              <div style={{ borderTop:'1px solid var(--border)', marginTop:14, paddingTop:14 }}>
+                <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:13, marginBottom:6 }}>😴 Rest Day (Sunday)</div>
+                <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>{plan.supplementProtocol.restDay.note}</div>
+              </div>
+            )}
+
+            {/* Shopping list */}
+            {plan.supplementProtocol.shoppingList && (
+              <div style={{ borderTop:'1px solid var(--border)', marginTop:14, paddingTop:14 }}>
+                <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:13, marginBottom:10 }}>🛒 Shopping List</div>
+                {plan.supplementProtocol.shoppingList.amazon?.length > 0 && (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:'var(--amber)', marginBottom:6, letterSpacing:1 }}>AMAZON</div>
+                    {plan.supplementProtocol.shoppingList.amazon.map((s, i) => (
+                      <div key={i} style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:13, fontWeight:700 }}>{s.item}</div>
+                        <div style={{ fontSize:12, color:'var(--accent)', marginTop:1 }}>{s.recommendation}</div>
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{s.note}</div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {plan.supplementProtocol.shoppingList.walmart?.length > 0 && (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:'var(--blue)', marginBottom:6, marginTop:10, letterSpacing:1 }}>WALMART — ALREADY PURCHASED</div>
+                    {plan.supplementProtocol.shoppingList.walmart.map((s, i) => (
+                      <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                        <div style={{ fontSize:12, color:'var(--muted)' }}>✅ {s.item}</div>
+                        {s.price && <div style={{ fontSize:12, color:'var(--muted)' }}>{s.price}</div>}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </>
