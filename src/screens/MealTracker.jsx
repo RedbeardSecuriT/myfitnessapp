@@ -44,7 +44,10 @@ const STATUS_STYLES = {
 
 export default function MealTracker() {
   const { user, data } = useApp()
-  const today = new Date().toISOString().split('T')[0]
+  const today = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  })()
 
   const [log,        setLog]        = useState([])
   const [loaded,     setLoaded]     = useState(false)
