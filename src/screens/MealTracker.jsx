@@ -31,6 +31,7 @@ const QUICK_ITEMS = [
   { emoji:'🍫', name:'Chocolate',               cal:170, cat:'snack'  },
   { emoji:'💪', name:'MRE Protein Shake (40g)', cal:240, cat:'food'   },
   { emoji:'🥛', name:'Oikos Triple Zero',       cal:130, cat:'snack'  },
+  { emoji:'🌯', name:'Banana PB Chia Flax Wrap', cal:320, cat:'food'  },
   { emoji:'🍕', name:'Pizza slice',             cal:285, cat:'food'   },
   { emoji:'🍔', name:'Burger',                  cal:550, cat:'food'   },
 ]
